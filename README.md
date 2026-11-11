@@ -46,6 +46,8 @@ Na primeira abertura (e depois de atualizações com cartões novos) o Plasdria 
 
 <img src="docs/screenshot-cards.png" width="900" alt="Plasdria com os cartões de GPU, maiores consumidores, áudio e brilho, Bluetooth e atalhos" />
 
+<img src="docs/screenshot-light.png" width="900" alt="Plasdria no tema claro" />
+
 O layout se adapta ao espaço: em telas largas, o **painel geral** fica em cima e os cartões e o chat embaixo, preenchendo todo o espaço; em tamanho médio (ou quando a altura é curta), painel e cartões rolam à esquerda, em uma ou duas colunas conforme a largura, com o chat ao lado; quando estreito (como no painel do Plasma), há abas **Painel** / **Chat**.
 
 <img src="docs/screenshot-narrow.png" width="260" alt="Plasdria em modo estreito, com abas" />
@@ -56,7 +58,7 @@ Clique com o botão direito no widget → **Configurar Plasdria…**
 
 - **Geral** — seu nome para a saudação, links iCal da agenda (um por linha), cidade (busca por nome) ou detecção automática, IA padrão (Antigravity, Claude, Codex, Gemini CLI, Ollama ou API Compatível), modelo e esforço padrão, endpoint/chave para API compatível e tema das notícias.
 - **Cartões** — escolha quais cartões aparecem (a posição de cada um se edita no próprio widget).
-- **Aparência** — cor de destaque, opacidade do fundo e animações.
+- **Aparência** — tema escuro, claro ou do sistema (acompanha o Plasma), cor de destaque, opacidade do fundo e animações.
 - **Atalhos de teclado** — defina um atalho global para abrir o chat (página padrão do Plasma).
 
 ## Instalação

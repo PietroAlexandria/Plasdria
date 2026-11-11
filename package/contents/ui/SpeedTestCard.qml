@@ -28,7 +28,7 @@ Card {
         Layout.preferredHeight: 30; Layout.preferredWidth: label.implicitWidth + 30; radius: 15
         color: solid ? (hover.hovered ? Qt.lighter(card.t.accent, 1.1) : card.t.accent) : (hover.hovered ? card.t.cardRaised : "transparent")
         border.color: solid ? "transparent" : card.t.border
-        Text { id: label; anchors.centerIn: parent; text: button.text; font.pixelSize: 12; font.weight: Font.DemiBold; color: button.solid ? "#101119" : card.t.muted }
+        Text { id: label; anchors.centerIn: parent; text: button.text; font.pixelSize: 12; font.weight: Font.DemiBold; color: button.solid ? card.t.textOnAccent : card.t.muted }
         HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
         TapHandler { onTapped: button.clicked() }
     }
@@ -66,7 +66,7 @@ Card {
                 delegate: Rectangle {
                     required property var modelData
                     Layout.fillWidth: true; Layout.preferredWidth: 1; implicitHeight: 70; radius: 10
-                    color: Qt.rgba(1, 1, 1, 0.035); border.color: card.t.border
+                    color: card.t.tint; border.color: card.t.border
                     ColumnLayout {
                         anchors.centerIn: parent; spacing: 0
                         RowLayout {

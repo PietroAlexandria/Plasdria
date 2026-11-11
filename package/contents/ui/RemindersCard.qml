@@ -47,7 +47,7 @@ Card {
                     width: 16; height: 16; radius: 8
                     color: modelData.done ? card.t.accent : "transparent"
                     border.color: modelData.done ? card.t.accent : card.t.faint; border.width: 1.5
-                    Kirigami.Icon { anchors.centerIn: parent; visible: modelData.done; source: "checkmark"; width: 11; height: 11; isMask: true; color: "#101119" }
+                    Kirigami.Icon { anchors.centerIn: parent; visible: modelData.done; source: "checkmark"; width: 11; height: 11; isMask: true; color: card.t.textOnAccent }
                     TapHandler { onTapped: card.toggle(modelData.id) }
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                 }

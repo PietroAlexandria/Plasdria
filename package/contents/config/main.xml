@@ -41,6 +41,7 @@
   <group name="Appearance">
     <entry name="accentColor" type="String"><default>#3daee9</default></entry>
     <entry name="backgroundOpacity" type="Int"><default>94</default></entry>
+    <entry name="themeMode" type="String"><default>dark</default></entry>
     <entry name="animations" type="Bool"><default>true</default></entry>
   </group>
   <group name="Data">

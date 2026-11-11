@@ -98,7 +98,7 @@ Card {
                     anchors.centerIn: parent
                     text: modelData.day
                     font.pixelSize: 11; font.weight: modelData.isToday ? Font.Bold : Font.Normal
-                    color: modelData.isToday ? "#0b0f18" : !modelData.inMonth ? Qt.rgba(1, 1, 1, 0.18) : modelData.weekend ? card.t.muted : card.t.ink
+                    color: modelData.isToday ? "#0b0f18" : !modelData.inMonth ? card.t.faint : modelData.weekend ? card.t.muted : card.t.ink
                 }
             }
         }

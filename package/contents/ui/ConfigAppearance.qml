@@ -9,6 +9,7 @@ KCM.SimpleKCM {
     property string cfg_accentColor
     property alias cfg_backgroundOpacity: opacitySlider.value
     property alias cfg_animations: animations.checked
+    property string cfg_themeMode
 
     readonly property var palette: [
         {color: "#3daee9", name: "Plasdria (azul)"}, {color: "#2bd9b0", name: "Plasdria (verde-água)"}, {color: "#8b7cff", name: "Violeta"},
@@ -17,6 +18,19 @@ KCM.SimpleKCM {
     ]
 
     Kirigami.FormLayout {
+        RowLayout {
+            Kirigami.FormData.label: "Tema:"
+            spacing: Kirigami.Units.smallSpacing
+            Repeater {
+                model: [{id: "dark", name: "Escuro"}, {id: "light", name: "Claro"}, {id: "system", name: "Do sistema"}]
+                delegate: QQC2.RadioButton {
+                    required property var modelData
+                    text: modelData.name
+                    checked: page.cfg_themeMode === modelData.id
+                    onClicked: page.cfg_themeMode = modelData.id
+                }
+            }
+        }
         RowLayout {
             Kirigami.FormData.label: "Cor de destaque:"
             spacing: Kirigami.Units.smallSpacing

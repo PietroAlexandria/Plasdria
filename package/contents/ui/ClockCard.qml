@@ -28,7 +28,7 @@ Card {
         Layout.preferredHeight: 30; Layout.preferredWidth: Math.max(72, label.implicitWidth + 28); radius: 15
         color: solid ? (hover.hovered ? Qt.lighter(card.t.accent, 1.1) : card.t.accent) : (hover.hovered ? card.t.cardRaised : "transparent")
         border.color: solid ? "transparent" : card.t.border
-        Text { id: label; anchors.centerIn: parent; text: button.text; font.pixelSize: 12; font.weight: Font.DemiBold; color: button.solid ? "#101119" : card.t.muted }
+        Text { id: label; anchors.centerIn: parent; text: button.text; font.pixelSize: 12; font.weight: Font.DemiBold; color: button.solid ? card.t.textOnAccent : card.t.muted }
         HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
         TapHandler { onTapped: button.clicked() }
     }
@@ -87,7 +87,7 @@ Card {
             Ring {
                 anchors.fill: parent; thickness: 6; label: ""
                 value: 100 * (1 - card.clock.tmRemaining() / Math.max(1, card.clock.tmTotal))
-                color: card.clock.tmRunning ? card.t.accent : card.t.faint; track: card.t.border; duration: 120
+                color: card.clock.tmRunning ? card.t.accent : card.t.faint; track: card.t.border; ink: card.t.ink; mutedInk: card.t.muted; duration: 120
             }
             Text { anchors.centerIn: parent; text: card.fmt(card.clock.tmRemaining(), false); color: card.t.ink; font.pixelSize: 24; font.weight: Font.Light }
         }
@@ -124,7 +124,7 @@ Card {
             Ring {
                 anchors.fill: parent; thickness: 6; label: ""
                 value: 100 * (1 - card.clock.pomRemaining() / Math.max(1, card.clock.pomTotal(card.clock.pomPhase)))
-                color: card.clock.pomPhase === "focus" ? card.t.accent : card.t.good; track: card.t.border; duration: 120
+                color: card.clock.pomPhase === "focus" ? card.t.accent : card.t.good; track: card.t.border; ink: card.t.ink; mutedInk: card.t.muted; duration: 120
             }
             ColumnLayout {
                 anchors.centerIn: parent; spacing: 0

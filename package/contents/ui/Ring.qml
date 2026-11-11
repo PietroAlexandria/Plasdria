@@ -18,6 +18,7 @@ Item {
     Behavior on shown { NumberAnimation { duration: ring.duration; easing.type: Easing.OutCubic } }
     onShownChanged: canvas.requestPaint()
     onColorChanged: canvas.requestPaint()
+    onTrackChanged: canvas.requestPaint()
 
     Canvas {
         id: canvas

@@ -237,7 +237,7 @@ Item {
                                 Rectangle {
                                     width: 18; height: 18; radius: 9
                                     color: row.picked ? shell.t.accent : "transparent"; border.color: row.picked ? shell.t.accent : shell.t.faint; border.width: 1.5
-                                    Kirigami.Icon { anchors.centerIn: parent; visible: row.picked; source: "checkmark"; width: 12; height: 12; isMask: true; color: "#101119" }
+                                    Kirigami.Icon { anchors.centerIn: parent; visible: row.picked; source: "checkmark"; width: 12; height: 12; isMask: true; color: shell.t.textOnAccent }
                                 }
                                 Kirigami.Icon { source: row.modelData.icon; implicitWidth: 18; implicitHeight: 18; isMask: true; color: shell.t.accent }
                                 ColumnLayout {
@@ -317,7 +317,7 @@ Item {
         color: solid ? shell.t.accent : chipHover.hovered ? shell.t.cardRaised : "transparent"
         border.color: solid ? "transparent" : muted ? shell.t.border : shell.t.accentLine
         Text { id: chipLabel; anchors.centerIn: parent; text: chip.text; font.pixelSize: 11; font.weight: chip.muted ? Font.Normal : Font.DemiBold
-            color: chip.solid ? "#101119" : chip.muted ? shell.t.muted : shell.t.accent }
+            color: chip.solid ? shell.t.textOnAccent : chip.muted ? shell.t.muted : shell.t.accent }
         HoverHandler { id: chipHover; cursorShape: Qt.PointingHandCursor }
         TapHandler { onTapped: chip.clicked() }
     }

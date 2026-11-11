@@ -4,7 +4,7 @@ import "../package/contents/ui"
 import "../package/contents/ui/bridge" as Backend
 
 // Captura telas do widget fora do Plasma, com dados reais:
-//   qml6 tools/preview.qml -- <pasta-de-saída> ["pergunta ao Claude (usa Haiku)"] [--sem-rede] [--editar] [--novos] [--demo]
+//   qml6 tools/preview.qml -- <pasta-de-saída> ["pergunta ao Claude (usa Haiku)"] [--sem-rede] [--editar] [--novos] [--demo] [--claro]
 // --sem-rede oculta o cartão de rede (nome do Wi-Fi e IP) para capturas públicas.
 Window {
     id: win
@@ -31,7 +31,7 @@ Window {
         property bool showMedia: true; property bool showNetwork: !win.hideNetwork; property bool showReminders: true; property bool showNews: true
         property string reminders: win.demo ? JSON.stringify([{id: "a", text: "Entregar trabalho de cálculo", done: false, due: Date.now() + 5 * 3600000, notified: false}, {id: "c", text: "Ligar para o João", done: false, due: Date.now() - 1800000, notified: true}, {id: "b", text: "Comprar café", done: true}]) : '[{"id":"a","text":"Entregar trabalho de cálculo","done":false},{"id":"b","text":"Comprar café","done":true}]'
     }
-    Theme { id: theme }
+    Theme { id: theme; mode: win.args.indexOf("--claro") >= 0 ? "light" : "dark" }
     Backend.ClaudeClient { id: client; Component.onCompleted: start() }
     Backend.DashboardClient { id: dash; Component.onCompleted: { setLocation("Ourinhos", -22.97889, -49.87056); start() } }
     Backend.MediaClient { id: media }

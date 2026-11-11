@@ -23,7 +23,7 @@ Rectangle {
         source: button.icon
         width: Math.round(button.size * 0.58); height: width
         isMask: !button.colored
-        color: button.primary ? "#101119" : button.active ? button.t.accent : button.t.ink
+        color: button.primary ? button.t.textOnAccent : button.active ? button.t.accent : button.t.ink
     }
     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
     TapHandler { onTapped: button.clicked() }

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
+import org.kde.kirigami as Kirigami
 import "bridge" as Backend
 import "timeparse.js" as TP
 
@@ -22,9 +23,11 @@ PlasmoidItem {
 
     Theme {
         id: themeBackend
-        accent: root.cfg.accentColor || "#3daee9"
+        accentBase: root.cfg.accentColor || "#3daee9"
         backgroundOpacity: (root.cfg.backgroundOpacity || 94) / 100
         animations: root.cfg.animations
+        mode: root.cfg.themeMode || "dark"
+        systemDark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     }
 
     // Segredos (chave da API e link da agenda) ficam no cofre do sistema, não no arquivo de configuração

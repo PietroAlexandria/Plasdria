@@ -59,7 +59,7 @@ Rectangle {
         implicitHeight: 54
         readonly property bool slim: width < 150
         radius: 11
-        color: tileHover.hovered && clickable ? hero.t.cardRaised : Qt.rgba(1, 1, 1, 0.035)
+        color: tileHover.hovered && clickable ? hero.t.cardRaised : hero.t.tint
         border.color: hero.t.border
         HoverHandler { id: tileHover; cursorShape: tile.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor }
         TapHandler { enabled: tile.clickable; onTapped: tile.activated() }
@@ -95,7 +95,9 @@ Rectangle {
             RowLayout {
                 spacing: 8
                 Image { source: "assets/icon.png"; Layout.preferredWidth: 26; Layout.preferredHeight: 26; sourceSize: Qt.size(64, 64); smooth: true; mipmap: true }
-                Image { source: "assets/wordmark.png"; Layout.preferredHeight: 17; Layout.preferredWidth: 17 * 468 / 96; smooth: true; mipmap: true; fillMode: Image.PreserveAspectFit }
+                // O logotipo em imagem é branco: no tema claro entra o nome em texto.
+                Image { visible: hero.t.dark; source: "assets/wordmark.png"; Layout.preferredHeight: 17; Layout.preferredWidth: 17 * 468 / 96; smooth: true; mipmap: true; fillMode: Image.PreserveAspectFit }
+                Text { visible: !hero.t.dark; text: "Plasdria"; color: hero.t.ink; font.pixelSize: 18; font.weight: Font.Bold; font.letterSpacing: 0.3 }
                 // Editar o layout: sempre ao lado do logo, sem cobrir nenhum conteúdo.
                 Rectangle {
                     visible: !hero.editing
