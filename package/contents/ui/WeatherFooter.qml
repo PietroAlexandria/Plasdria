@@ -76,7 +76,7 @@ Rectangle {
                             id: hourCol; anchors.horizontalCenter: parent.horizontalCenter; spacing: 0
                             Text { text: modelData.now ? "Agora" : modelData.hour; color: modelData.now ? footer.t.accent : footer.t.muted; font.pixelSize: 10; Layout.alignment: Qt.AlignHCenter }
                             Item { Layout.preferredWidth: 22; Layout.preferredHeight: 20; Layout.alignment: Qt.AlignHCenter
-                                WeatherIcon { anchors.centerIn: parent; code: modelData.code; animated: false; scale: 0.48 } }
+                                WeatherIcon { t: footer.t; anchors.centerIn: parent; code: modelData.code; animated: false; scale: 0.48 } }
                             Text { text: modelData.temp + "°" + (modelData.rain > 20 ? " · " + modelData.rain + "%" : ""); color: footer.t.ink; font.pixelSize: 11; Layout.alignment: Qt.AlignHCenter }
                         }
                     }
@@ -104,9 +104,9 @@ Rectangle {
                             id: dayCol; anchors.horizontalCenter: parent.horizontalCenter; spacing: 0
                             Text { text: modelData.isToday ? "Hoje" : modelData.day.slice(0, 3); color: modelData.isToday ? footer.t.accent : footer.t.muted; font.pixelSize: 10; Layout.alignment: Qt.AlignHCenter }
                             Item { Layout.preferredWidth: 22; Layout.preferredHeight: 20; Layout.alignment: Qt.AlignHCenter
-                                WeatherIcon { anchors.centerIn: parent; code: modelData.code; animated: false; scale: 0.48 } }
+                                WeatherIcon { t: footer.t; anchors.centerIn: parent; code: modelData.code; animated: false; scale: 0.48 } }
                             Text { text: modelData.high + " " + modelData.low; color: footer.t.ink; font.pixelSize: 11; Layout.alignment: Qt.AlignHCenter }
-                            Text { text: modelData.rain > 0 ? "☂ " + modelData.rain + "%" : " "; color: "#7cc4ff"; font.pixelSize: 9; Layout.alignment: Qt.AlignHCenter }
+                            Text { text: modelData.rain > 0 ? "☂ " + modelData.rain + "%" : " "; color: footer.t.rainText; font.pixelSize: 9; Layout.alignment: Qt.AlignHCenter }
                         }
                     }
                 }

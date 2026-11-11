@@ -27,7 +27,7 @@ Rectangle {
     border.color: t.border
     gradient: Gradient {
         orientation: Gradient.Horizontal
-        GradientStop { position: 0; color: Qt.rgba(hero.t.accent.r, hero.t.accent.g, hero.t.accent.b, 0.18) }
+        GradientStop { position: 0; color: Qt.rgba(hero.t.accent.r, hero.t.accent.g, hero.t.accent.b, hero.t.dark ? 0.18 : 0.11) }
         GradientStop { position: 0.4; color: hero.t.card }
         GradientStop { position: 1; color: hero.t.card }
     }
@@ -132,7 +132,7 @@ Rectangle {
             Layout.alignment: hero.eff === "stacked" ? Qt.AlignLeft : Qt.AlignVCenter
             Item {
                 Layout.preferredWidth: 56; Layout.preferredHeight: 56
-                WeatherIcon { anchors.centerIn: parent; scale: 1.3; code: hero.w.code !== undefined ? hero.w.code : (hero.dash.forecast.length ? hero.dash.forecast[0].code : 0); animated: hero.t.animations }
+                WeatherIcon { t: hero.t; anchors.centerIn: parent; scale: 1.3; code: hero.w.code !== undefined ? hero.w.code : (hero.dash.forecast.length ? hero.dash.forecast[0].code : 0); animated: hero.t.animations }
             }
             ColumnLayout {
                 spacing: 0

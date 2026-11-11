@@ -3,6 +3,7 @@ import QtQuick.Shapes
 
 Item {
     id: root
+    required property var t
     property int code: 0
     property bool animated: true
     readonly property bool sunny: code >= 0 && code <= 2
@@ -19,18 +20,18 @@ Item {
             delegate: Item {
                 required property int index
                 anchors.fill: parent; rotation: index * 45
-                Rectangle { anchors.horizontalCenter: parent.horizontalCenter; y: 0; width: 2; height: 4; radius: 1; color: "#e5bd65" }
+                Rectangle { anchors.horizontalCenter: parent.horizontalCenter; y: 0; width: 2; height: 4; radius: 1; color: root.t.sunRay }
             }
         }
-        Rectangle { anchors.centerIn: parent; width: 15; height: 15; radius: 8; color: "#f4cf79" }
+        Rectangle { anchors.centerIn: parent; width: 15; height: 15; radius: 8; color: root.t.sunCore }
         RotationAnimator on rotation { from: 0; to: 360; duration: 28000; loops: Animation.Infinite; running: root.animated && root.visible && root.sunny }
     }
     Item {
         id: cloud; objectName: "weatherCloud"
         visible: root.cloudy; x: 6; y: 5; width: 34; height: 20
-        Rectangle { x: 2; y: 8; width: 31; height: 12; radius: 6; color: "#c3c9d1" }
-        Rectangle { x: 7; y: 3; width: 15; height: 15; radius: 8; color: "#d1d6dd" }
-        Rectangle { x: 17; y: 6; width: 13; height: 13; radius: 7; color: "#c3c9d1" }
+        Rectangle { x: 2; y: 8; width: 31; height: 12; radius: 6; color: root.t.cloudA }
+        Rectangle { x: 7; y: 3; width: 15; height: 15; radius: 8; color: root.t.cloudB }
+        Rectangle { x: 17; y: 6; width: 13; height: 13; radius: 7; color: root.t.cloudA }
         SequentialAnimation on x {
             running: root.animated && root.visible && root.cloudy; loops: Animation.Infinite
             NumberAnimation { from: 5; to: 8; duration: 2200; easing.type: Easing.InOutSine }
@@ -42,7 +43,7 @@ Item {
         delegate: Rectangle {
             required property int index
             x: root.code >= 95 ? cloud.x + 2 + index * 26 : 11 + index * 9; y: 26
-            width: root.snow ? 3 : 2; height: root.snow ? 3 : 5; radius: 1.5; color: "#83b2d6"; rotation: root.snow ? 0 : 15
+            width: root.snow ? 3 : 2; height: root.snow ? 3 : 5; radius: 1.5; color: root.t.rainDrop; rotation: root.snow ? 0 : 15
             SequentialAnimation on y {
                 running: root.animated && root.visible; loops: Animation.Infinite
                 PauseAnimation { duration: index * 170 }
@@ -59,7 +60,7 @@ Item {
         width: 12; height: 20; opacity: .85
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
-            strokeWidth: 0; strokeColor: "transparent"; fillColor: "#f7ce65"
+            strokeWidth: 0; strokeColor: "transparent"; fillColor: root.t.sunCore
             PathSvg { path: "M6 0H10L7 7H12L3 20L5 11H0Z" }
         }
         SequentialAnimation on opacity {

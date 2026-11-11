@@ -39,7 +39,7 @@ Card {
             RowLayout {
                 id: openRow; anchors.centerIn: parent; spacing: 6
                 Kirigami.Icon { source: "spotify"; implicitWidth: 16; implicitHeight: 16 }
-                Text { text: "Abrir o Spotify"; color: "#1ed760"; font.pixelSize: 12; font.weight: Font.DemiBold }
+                Text { text: "Abrir o Spotify"; color: card.t.spotify; font.pixelSize: 12; font.weight: Font.DemiBold }
             }
             HoverHandler { id: openHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: card.media.openSpotify() }
