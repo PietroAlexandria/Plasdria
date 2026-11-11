@@ -16,6 +16,7 @@
 #include "chathistory.h"
 #include "mediaclient.h"
 #include "networkclient.h"
+#include "secretclient.h"
 
 class Messages : public QAbstractListModel {
     Q_OBJECT
@@ -1697,6 +1698,7 @@ public:
         qmlRegisterType<DashboardClient>(uri,1,0,"DashboardClient");
         qmlRegisterType<MediaClient>(uri,1,0,"MediaClient");
         qmlRegisterType<NetworkClient>(uri,1,0,"NetworkClient");
+        qmlRegisterType<SecretClient>(uri,1,0,"SecretClient");
     }
 };
 #include "plugin.moc"

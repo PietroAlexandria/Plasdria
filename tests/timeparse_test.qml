@@ -52,6 +52,29 @@ Item {
         check("eventos", names, ["Reunião, semanal@2026-11-09", "Dia@2026-11-10", "Aniversário@2026-11-12*", "Reunião, semanal@2026-11-16", "Reunião, semanal@2026-11-18", "Mensal@2026-12-31"])
         check("duração", events[0].end - events[0].start, 3600000)
 
+        const list = [{id: "1", text: "agora", done: false, due: now - 60000, notified: false},
+                      {id: "2", text: "futuro", done: false, due: now + 3600000, notified: false},
+                      {id: "3", text: "já avisado", done: false, due: now - 60000, notified: true},
+                      {id: "4", text: "feito", done: true, due: now - 60000, notified: false},
+                      {id: "5", text: "muito antigo", done: false, due: now - 7 * 3600000, notified: false},
+                      {id: "6", text: "sem prazo", done: false}]
+        const due = TP.dueReminders(list, now)
+        check("alarme: avisa só o vencido e recente", due.notify, ["agora"])
+        check("alarme: marca como avisados (inclusive o antigo)", due.list.map(i => !!i.notified), [true, false, true, false, true, false])
+        check("alarme: houve mudança", due.changed, true)
+        check("alarme: segunda rodada não repete", TP.dueReminders(due.list, now).notify, [])
+        check("alarme: sem mudança na segunda rodada", TP.dueReminders(due.list, now).changed, false)
+
+        const agenda = [{title: "Em 8 min", start: now + 8 * 60000, allDay: false, location: "Sala 1"},
+                        {title: "Em 30 min", start: now + 30 * 60000, allDay: false, location: ""},
+                        {title: "Já começou", start: now - 60000, allDay: false, location: ""},
+                        {title: "Dia todo", start: now + 5 * 60000, allDay: true, location: ""}]
+        let up = TP.upcomingEvents(agenda, now, 10 * 60000, {})
+        check("evento: avisa só o que começa em 10 min", up.notify.map(e => e.title + ":" + e.minutes), ["Em 8 min:8"])
+        check("evento: não repete", TP.upcomingEvents(agenda, now + 60000, 10 * 60000, up.seen).notify, [])
+        check("evento: avisa o seguinte quando chega a hora", TP.upcomingEvents(agenda, now + 25 * 60000, 10 * 60000, up.seen).notify.map(e => e.title), ["Em 30 min"])
+        check("evento: lead 0 desliga", TP.upcomingEvents(agenda, now, 0, {}).notify, [])
+
         console.log(failures === 0 ? "TODOS OS TESTES PASSARAM" : failures + " FALHA(S)")
         Qt.exit(failures === 0 ? 0 : 1)
     }

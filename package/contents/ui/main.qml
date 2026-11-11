@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import "bridge" as Backend
+import "timeparse.js" as TP
 
 PlasmoidItem {
     id: root
@@ -26,11 +27,46 @@ PlasmoidItem {
         animations: root.cfg.animations
     }
 
+    // Segredos (chave da API e link da agenda) ficam no cofre do sistema, não no arquivo de configuração
+    // do Plasma (que qualquer usuário do computador lê). Sem cofre disponível, continuam na configuração.
+    property string secretApiKey: ""
+    property string secretCalendarUrls: ""
+    readonly property string cfgApiKey: cfg.customApiKey || ""
+    readonly property string cfgCalendarUrls: cfg.calendarUrls || ""
+    readonly property string effectiveApiKey: cfgApiKey.trim() !== "" ? cfgApiKey : secretApiKey
+    readonly property string effectiveCalendarUrls: cfgCalendarUrls.trim() !== "" ? cfgCalendarUrls : secretCalendarUrls
+    // O que for digitado nas configurações passa para o cofre e o campo é esvaziado. Escrever "-" apaga.
+    function moveToVault(name, typed) {
+        const value = typed.trim() === "-" ? "" : typed.trim()
+        return vault.write(name, value) ? value : null
+    }
+    function migrateSecrets() {
+        if (cfgApiKey.trim() !== "") {
+            const v = moveToVault("customApiKey", cfgApiKey)
+            if (v !== null) { secretApiKey = v; cfg.customApiKeyInVault = v !== ""; cfg.customApiKey = "" }
+        }
+        if (cfgCalendarUrls.trim() !== "") {
+            const v = moveToVault("calendarUrls", cfgCalendarUrls)
+            if (v !== null) { secretCalendarUrls = v; cfg.calendarUrlsInVault = v !== ""; cfg.calendarUrls = "" }
+        }
+    }
+    onCfgApiKeyChanged: migrateSecrets()
+    onCfgCalendarUrlsChanged: migrateSecrets()
+    Backend.SecretClient {
+        id: vault
+        // Lido antes de o chat conectar (objetos completam na ordem em que aparecem neste arquivo).
+        Component.onCompleted: {
+            root.secretApiKey = read("customApiKey")
+            root.secretCalendarUrls = read("calendarUrls")
+            root.migrateSecrets()
+        }
+    }
+
     Backend.ClaudeClient {
         id: claudeBackend
         property bool defaultsApplied: false
         customApiUrl: root.cfg.customApiUrl || "https://api.openai.com/v1"
-        customApiKey: root.cfg.customApiKey || ""
+        customApiKey: root.effectiveApiKey
         customModel: root.cfg.customModel || ""
         Component.onCompleted: {
             if (!hasSavedProvider && root.cfg.defaultProvider) provider = root.cfg.defaultProvider
@@ -74,18 +110,22 @@ PlasmoidItem {
         let list
         try { list = JSON.parse(cfg.reminders || "[]") } catch (e) { return }
         if (!Array.isArray(list)) return
-        const now = Date.now()
-        let changed = false
-        for (const item of list) {
-            if (item.done || !(item.due > 0) || item.notified || item.due > now) continue
-            item.notified = true; changed = true
-            // Lembretes muito antigos (widget estava fechado) são só marcados, sem barulho.
-            if (now - item.due < 6 * 3600 * 1000) dashBackend.notify("Lembrete", item.text)
-        }
-        if (changed) cfg.reminders = JSON.stringify(list)
+        const result = TP.dueReminders(list, Date.now())
+        for (const text of result.notify) dashBackend.notify("Lembrete", text)
+        if (result.changed) cfg.reminders = JSON.stringify(result.list)
+        checkEvents()
+    }
+    // Eventos da agenda: avisa alguns minutos antes (0 desliga). O que já foi avisado fica só em memória.
+    property var notifiedEvents: ({})
+    function checkEvents() {
+        const lead = (cfg.eventLeadMinutes === undefined ? 10 : cfg.eventLeadMinutes) * 60000
+        const result = TP.upcomingEvents(calendarFeed.events, Date.now(), lead, notifiedEvents)
+        notifiedEvents = result.seen
+        for (const e of result.notify)
+            dashBackend.notify(e.title, "Começa em " + e.minutes + " min (" + new Date(e.start).toLocaleTimeString(Qt.locale(), "HH:mm") + ")" + (e.location ? " · " + e.location : ""))
     }
 
-    IcsFeed { id: calendarFeed; urls: root.cfg.calendarUrls || "" }
+    IcsFeed { id: calendarFeed; urls: root.effectiveCalendarUrls }
 
     Backend.MediaClient { id: mediaBackend }
     Backend.NetworkClient { id: netBackend }

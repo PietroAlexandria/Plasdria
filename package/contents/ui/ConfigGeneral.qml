@@ -19,6 +19,9 @@ KCM.SimpleKCM {
     property alias cfg_customModel: customModel.text
     property string cfg_newsTopic
     property alias cfg_calendarUrls: calendarUrls.text
+    property bool cfg_customApiKeyInVault
+    property bool cfg_calendarUrlsInVault
+    property alias cfg_eventLeadMinutes: eventLead.value
 
     property var results: []
     property string searchError: ""
@@ -187,7 +190,7 @@ KCM.SimpleKCM {
             id: customApiKey
             visible: page.cfg_defaultProvider === "custom"
             Kirigami.FormData.label: "Chave da API:"
-            placeholderText: "sk-... (ou defina OPENAI_API_KEY)"
+            placeholderText: page.cfg_customApiKeyInVault ? "Guardada no cofre do sistema. Digite para trocar (“-” apaga)." : "sk-... (ou defina OPENAI_API_KEY)"
             echoMode: TextInput.Password
             Layout.preferredWidth: Kirigami.Units.gridUnit * 20
         }
@@ -218,10 +221,17 @@ KCM.SimpleKCM {
         QQC2.TextArea {
             id: calendarUrls
             Kirigami.FormData.label: "Links iCal (.ics):"
-            placeholderText: "https://calendar.google.com/calendar/ical/.../basic.ics"
+            placeholderText: page.cfg_calendarUrlsInVault ? "Guardados no cofre do sistema. Digite para substituir (“-” apaga)." : "https://calendar.google.com/calendar/ical/.../basic.ics"
             wrapMode: TextEdit.NoWrap
             Layout.preferredWidth: Kirigami.Units.gridUnit * 20
             Layout.preferredHeight: Kirigami.Units.gridUnit * 4
+        }
+        QQC2.SpinBox {
+            id: eventLead
+            Kirigami.FormData.label: "Avisar antes do evento:"
+            from: 0; to: 120; stepSize: 5
+            textFromValue: v => v === 0 ? "desligado" : v + " min"
+            valueFromText: t => parseInt(t) || 0
         }
         QQC2.Label {
             text: "Um link por linha. No Google Agenda: Configurações da agenda → “Endereço secreto no formato iCal”. Esse endereço dá acesso à sua agenda: não o compartilhe. Os eventos aparecem no calendário e atualizam a cada 15 minutos."

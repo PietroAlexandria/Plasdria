@@ -225,3 +225,33 @@ function parseIcs(text, fromMs, toMs, source) {
     events.sort(function (a, b) { return a.start - b.start })
     return events
 }
+
+// Alarmes: quais lembretes venceram e ainda não avisaram. Devolve a lista atualizada (marcada como avisada),
+// o que notificar e se algo mudou. Lembretes vencidos há mais de 6 h são marcados sem notificar
+// (o widget estava fechado) para não despejar avisos antigos.
+function dueReminders(list, nowMs) {
+    var notify = [], changed = false
+    var updated = list.map(function (item) {
+        if (item.done || !(item.due > 0) || item.notified || item.due > nowMs) return item
+        changed = true
+        if (nowMs - item.due < 6 * 3600 * 1000) notify.push(item.text)
+        return Object.assign({}, item, {notified: true})
+    })
+    return {list: updated, notify: notify, changed: changed}
+}
+
+// Eventos da agenda que começam dentro de leadMs e ainda não foram avisados (eventos de dia inteiro não avisam).
+// `seen` guarda o que já foi avisado (chave = título + início) para não repetir; devolve o novo `seen`,
+// já sem entradas antigas.
+function upcomingEvents(events, nowMs, leadMs, seen) {
+    var notify = [], next = {}
+    for (var key in seen) if (seen[key] > nowMs - 3600000) next[key] = seen[key]
+    if (leadMs > 0) events.forEach(function (e) {
+        if (e.allDay || e.start <= nowMs || e.start > nowMs + leadMs) return
+        var key = e.title + "|" + e.start
+        if (next[key]) return
+        next[key] = e.start
+        notify.push({title: e.title, start: e.start, location: e.location, minutes: Math.max(1, Math.round((e.start - nowMs) / 60000))})
+    })
+    return {notify: notify, seen: next}
+}

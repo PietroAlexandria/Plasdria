@@ -17,6 +17,9 @@
     <entry name="customModel" type="String"><default></default></entry>
     <entry name="newsTopic" type="String"><default></default></entry>
     <entry name="calendarUrls" type="String"><default></default></entry>
+    <entry name="customApiKeyInVault" type="Bool"><default>false</default></entry>
+    <entry name="calendarUrlsInVault" type="Bool"><default>false</default></entry>
+    <entry name="eventLeadMinutes" type="Int"><default>10</default></entry>
   </group>
   <group name="Cards">
     <entry name="showWeather" type="Bool"><default>true</default></entry>
