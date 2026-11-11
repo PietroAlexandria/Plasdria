@@ -4,7 +4,7 @@ import "../package/contents/ui"
 import "../package/contents/ui/bridge" as Backend
 
 // Captura telas do widget fora do Plasma, com dados reais:
-//   qml6 tools/preview.qml -- <pasta-de-saída> ["pergunta ao Claude (usa Haiku)"] [--sem-rede] [--editar]
+//   qml6 tools/preview.qml -- <pasta-de-saída> ["pergunta ao Claude (usa Haiku)"] [--sem-rede] [--editar] [--novos] [--demo]
 // --sem-rede oculta o cartão de rede (nome do Wi-Fi e IP) para capturas públicas.
 Window {
     id: win
@@ -16,9 +16,13 @@ Window {
     readonly property bool hideNetwork: args.indexOf("--sem-rede") >= 0
     readonly property bool edit: args.indexOf("--editar") >= 0
     readonly property bool demo: args.indexOf("--demo") >= 0
+    readonly property bool novos: args.indexOf("--novos") >= 0   // mostra os cartões novos (áudio, Bluetooth, consumidores, GPU, atalhos)
     QtObject {
         id: cfg
         property string userName: "Pietro"
+        property bool showAudio: true; property bool showBluetooth: true; property bool showTop: true; property bool showGpu: true; property bool showShortcuts: true
+        property string layout: win.novos ? JSON.stringify({cols: [{w: 0.95, c: ["system", "gpu", "top"]}, {w: 1.2, c: ["chat"]}, {w: 1, c: ["media", "audio", "bluetooth", "shortcuts"]}, {w: 1, c: ["reminders", "calendar", "news"]}], hidden: ["devices", "network"]}) : ""
+        property string shortcuts: "[]"
         property bool showWeather: true; property bool showSystem: true; property bool showConnections: true
         property bool showCalendar: true
         property bool showMedia: true; property bool showNetwork: !win.hideNetwork; property bool showReminders: true; property bool showNews: true
@@ -28,6 +32,7 @@ Window {
     Backend.ClaudeClient { id: client; Component.onCompleted: start() }
     Backend.DashboardClient { id: dash; Component.onCompleted: { setLocation("Ourinhos", -22.97889, -49.87056); start() } }
     Backend.MediaClient { id: media }
+    Backend.SystemClient { id: systemBackend }
     Backend.NetworkClient { id: realNet }
     // Com --sem-rede, o nome do Wi-Fi não aparece nas capturas públicas.
     QtObject {
@@ -41,7 +46,7 @@ Window {
     readonly property var netSource: win.hideNetwork ? maskedNet : realNet
     Shell { id: shell; editing: win.edit;
         feedConfigured: win.demo
-        events: win.demo ? win.demoEvents : []; anchors.fill: parent; anchors.margins: 10; t: theme; client: client; dash: dash; media: media; net: win.netSource; cfg: cfg }
+        events: win.demo ? win.demoEvents : []; anchors.fill: parent; anchors.margins: 10; t: theme; client: client; dash: dash; media: media; net: win.netSource; cfg: cfg; sys: systemBackend }
 
     // Eventos de exemplo (para as capturas do README).
     readonly property var demoEvents: {
@@ -53,6 +58,12 @@ Window {
             {title: "Prova de Física", start: at(3, 8, 0), end: at(3, 10, 0), allDay: false, location: ""},
             {title: "Aniversário da Ana", start: at(6, 0, 0), end: at(7, 0, 0), allDay: true, location: ""}]
     }
+    // Atalhos de exemplo com aplicativos que existem de verdade neste computador.
+    Timer { interval: 1500; running: win.novos; onTriggered: {
+        const wanted = ["Firefox", "Dolphin", "Konsole", "Spotify", "Blender", "Antigravity"], apps = systemBackend.applications(), picked = []
+        for (const w of wanted) { const a = apps.find(x => x.name.indexOf(w) === 0); if (a) picked.push({name: a.name, target: "app:" + a.id, icon: a.icon}) }
+        picked.push({name: "github.com", target: "https://github.com/PietroAlexandria/Plasdria", icon: "internet-web-browser"})
+        cfg.shortcuts = JSON.stringify(picked.slice(0, 6)) } }
     property int stage: 0
     function shot(name, next) { win.contentItem.grabToImage(r => { r.saveToFile(outDir + "/" + name + ".png"); console.log("SHOT", name); next() }) }
     Timer {

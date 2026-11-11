@@ -5,6 +5,7 @@ import QtQuick.Layouts
 Card {
     id: card
     required property var dash
+    property var sys: null
     title: "Sistema"
     icon: "computer-symbolic"
     readonly property var d: dash.systemDetails || ({})
@@ -17,7 +18,7 @@ Card {
         Repeater {
             model: [
                 {name: "CPU", value: card.dash.cpuUsage},
-                {name: "GPU", value: card.dash.gpuUsage},
+                {name: "GPU", value: card.sys && card.sys.gpuUsage >= 0 ? card.sys.gpuUsage : card.dash.gpuUsage},
                 {name: "RAM", value: card.dash.memoryUsage},
                 {name: "Disco", value: card.dash.storageUsage}
             ]

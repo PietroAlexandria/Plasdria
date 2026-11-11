@@ -30,6 +30,11 @@
     <entry name="showCalendar" type="Bool"><default>true</default></entry>
     <entry name="showReminders" type="Bool"><default>true</default></entry>
     <entry name="showNews" type="Bool"><default>true</default></entry>
+    <entry name="showAudio" type="Bool"><default>true</default></entry>
+    <entry name="showBluetooth" type="Bool"><default>true</default></entry>
+    <entry name="showTop" type="Bool"><default>true</default></entry>
+    <entry name="showGpu" type="Bool"><default>true</default></entry>
+    <entry name="showShortcuts" type="Bool"><default>true</default></entry>
   </group>
   <group name="Appearance">
     <entry name="accentColor" type="String"><default>#3daee9</default></entry>
@@ -39,5 +44,6 @@
   <group name="Data">
     <entry name="reminders" type="String"><default>[]</default></entry>
     <entry name="layout" type="String"><default></default></entry>
+    <entry name="shortcuts" type="String"><default>[]</default></entry>
   </group>
 </kcfg>

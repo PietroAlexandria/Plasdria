@@ -31,9 +31,18 @@ Um widget para KDE Plasma 6 com chat integrado ao **Antigravity**, **Claude** e 
 | **Sistema** | CPU, GPU, RAM e disco em anéis com cores por nível de uso, mais processador, temperaturas da CPU e do SSD, memória e swap, carga, processos, tempo ligado, bateria e versão do sistema. |
 | **Calendário** | Mês atual com navegação, hoje destacado, semana do ano e dia do ano. Com o link iCal da sua agenda (Google Agenda, Nextcloud, Outlook…), mostra pontinhos nos dias com compromissos e a agenda do dia que você tocar, incluindo eventos que se repetem. |
 | **Dispositivos** | Bateria do notebook e de periféricos que publicam essa informação (UPower/BlueZ). |
+| **Áudio e brilho** | Volume (arraste ou toque na barra), silenciar, escolha da saída de áudio (alto-falantes, fone…, levando junto o que já está tocando) e brilho da tela. Usa o PipeWire/PulseAudio (`pactl`); o brilho é ajustado pelo logind, sem root. |
+| **Bluetooth** | Liga e desliga o Bluetooth e lista os dispositivos pareados com estado e bateria; um toque conecta ou desconecta. |
+| **Maiores consumidores** | Os programas que mais usam CPU e memória, somando os processos de cada um (um navegador com 12 processos vira uma linha). Só mede enquanto o cartão está na tela. |
+| **GPU** | Nome da placa, uso (com histórico), frequência, temperatura e memória, conforme o driver informar: Intel (i915/xe), AMD (amdgpu) e NVIDIA (`nvidia-smi`). O anel de GPU do cartão Sistema usa a mesma leitura. |
+| **Atalhos** | Aplicativos instalados, sites e pastas com um toque. Só abre apps, endereços http/https/mailto, arquivos e pastas: nunca comandos de terminal. |
 | **Notícias** | Lista de manchetes do Google News Brasil com fonte e horário, tema configurável (Tecnologia, Esportes, Economia…). |
 
 **Layout editável.** Clique em **✎ Editar** ao lado do logo, no topo do widget (ou clique direito → **Editar layout**) e reorganize na mão: arraste os cartões pelo nome para outra posição ou coluna, oculte o que não usa (e traga de volta pela barra), puxe as divisões entre as colunas para mudar a largura e use **Restaurar padrão** se quiser recomeçar. O arranjo fica salvo. Nos tamanhos médio e estreito a edição usa setas ▲ ▼ para mudar a ordem dos cartões.
+
+Os cartões **Áudio e brilho, Bluetooth, Maiores consumidores, GPU e Atalhos** começam ocultos no layout: clique em **✎ Editar** e toque em **＋ Nome** para colocá-los onde quiser (ou desligue-os de vez em Configurar → Cartões).
+
+<img src="docs/screenshot-cards.png" width="900" alt="Plasdria com os cartões de GPU, maiores consumidores, áudio e brilho, Bluetooth e atalhos" />
 
 O layout se adapta ao espaço: em telas largas, o **painel geral** fica em cima e os cartões e o chat embaixo, preenchendo todo o espaço; em tamanho médio (ou quando a altura é curta), painel e cartões rolam à esquerda, em uma ou duas colunas conforme a largura, com o chat ao lado; quando estreito (como no painel do Plasma), há abas **Painel** / **Chat**.
 
@@ -86,7 +95,7 @@ O projeto já vem configurado para o **VS Code** (`.vscode/`): abra a pasta e us
 | --- | --- |
 | Compilar | Gera o plugin nativo e o pacote `plasdria.plasmoid` |
 | Instalar no Plasma | Compila e instala/atualiza o widget |
-| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, e a edição do layout com mouse simulado |
+| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, a edição do layout e os cartões novos com mouse simulado |
 | Prévia (capturas) | Renderiza o widget fora do Plasma e salva PNGs em `build/preview/` |
 
 Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6 tools/preview.qml -- <pasta> [--sem-rede]`.
@@ -100,7 +109,8 @@ Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6
 | Assistente | Antigravity (`agy`), Claude Code (`claude`), Codex (`codex`), Gemini CLI (`gemini`), Ollama (`/api/chat`) e APIs compatíveis com OpenAI (`/v1/chat/completions`) |
 | Música | MPRIS via D-Bus |
 | Rede | `/proc/net/dev`, NetworkManager via D-Bus |
-| Sistema e baterias | `/proc`, `/sys` (hwmon), UPower e BlueZ; `nvidia-smi` quando disponível |
+| Sistema e baterias | `/proc`, `/sys` (hwmon, backlight, drm), UPower e BlueZ; `nvidia-smi` quando disponível |
+| Áudio, brilho e Bluetooth | `pactl` (PipeWire/PulseAudio), logind (brilho), BlueZ e rfkill |
 | Clima e cidades | Open-Meteo (atual, por hora, 7 dias e geocodificação) |
 | Notícias | RSS do Google News Brasil |
 

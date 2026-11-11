@@ -128,6 +128,7 @@ PlasmoidItem {
     IcsFeed { id: calendarFeed; urls: root.effectiveCalendarUrls }
 
     Backend.MediaClient { id: mediaBackend }
+    Backend.SystemClient { id: sysBackend }
     Backend.NetworkClient { id: netBackend }
 
     Plasmoid.contextualActions: [
@@ -157,6 +158,8 @@ PlasmoidItem {
         id: shell
         t: themeBackend; client: claudeBackend; dash: dashBackend; media: mediaBackend; net: netBackend; cfg: root.cfg
         editing: root.layoutEditing
+        sys: sysBackend
+        onSaveShortcuts: json => root.cfg.shortcuts = json
         events: calendarFeed.events; feedConfigured: calendarFeed.configured; feedStatus: calendarFeed.status
         onEditRequested: on => root.layoutEditing = on
         onSaveReminders: json => root.cfg.reminders = json

@@ -12,6 +12,11 @@ KCM.SimpleKCM {
     property alias cfg_showCalendar: calendar.checked
     property alias cfg_showReminders: reminders.checked
     property alias cfg_showNews: news.checked
+    property alias cfg_showAudio: audio.checked
+    property alias cfg_showBluetooth: bluetooth.checked
+    property alias cfg_showTop: top.checked
+    property alias cfg_showGpu: gpu.checked
+    property alias cfg_showShortcuts: shortcuts.checked
 
     Kirigami.FormLayout {
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: "Cartões visíveis" }
@@ -23,8 +28,13 @@ KCM.SimpleKCM {
         QQC2.CheckBox { id: calendar; text: "Calendário" }
         QQC2.CheckBox { id: reminders; text: "Lembretes" }
         QQC2.CheckBox { id: news; text: "Notícias" }
+        QQC2.CheckBox { id: audio; text: "Áudio e brilho (volume, saída e brilho da tela)" }
+        QQC2.CheckBox { id: bluetooth; text: "Bluetooth (dispositivos e bateria)" }
+        QQC2.CheckBox { id: top; text: "Maiores consumidores (CPU e memória)" }
+        QQC2.CheckBox { id: gpu; text: "GPU (uso, frequência e memória)" }
+        QQC2.CheckBox { id: shortcuts; text: "Atalhos (aplicativos, sites e pastas)" }
         QQC2.Label {
-            text: "O chat com o Claude fica sempre visível. Os cartões restantes ocupam o espaço dos ocultos."
+            text: "O chat fica sempre visível. Os cartões novos (áudio, Bluetooth, consumidores, GPU e atalhos) começam ocultos no layout: use ✎ Editar e toque em ＋ para colocá-los onde quiser."
             wrapMode: Text.Wrap; opacity: 0.7
             Layout.preferredWidth: Kirigami.Units.gridUnit * 22
         }

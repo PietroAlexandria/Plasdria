@@ -19,6 +19,8 @@ Item {
     required property var net
     required property var cfg
     property bool editing: false
+    property var sys: null          // controles do sistema (áudio, brilho, Bluetooth, processos, GPU, atalhos)
+    signal saveShortcuts(string json)
     // Eventos das agendas iCal configuradas (veja IcsFeed.qml).
     property var events: []
     property bool feedConfigured: false
@@ -37,15 +39,18 @@ Item {
     }
 
     // ── Arranjo dos cartões ────────────────────────────────────────────────
-    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news"]
+    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts"]
+    // Cartões novos começam ocultos: aparecem na barra de edição (＋) para você escolher onde ficam.
+    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts"]
     readonly property var names: ({system: "Sistema", devices: "Dispositivos", network: "Rede", chat: "Chat · " + shell.client.providerName,
-                                   media: "Música", calendar: "Calendário", reminders: "Lembretes", news: "Notícias"})
+                                   media: "Música", calendar: "Calendário", reminders: "Lembretes", news: "Notícias",
+                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos"})
     readonly property var defaultCols: [["system", "devices", "network"], ["chat"], ["media", "calendar"], ["reminders", "news"]]
     readonly property var defaultWeights: [0.95, 1.35, 1, 1]
 
     property var colIds: defaultCols
     property var colW: defaultWeights
-    property var hiddenIds: []
+    property var hiddenIds: newIds.slice()
 
     function cardOn(id) {
         switch (id) {
@@ -56,6 +61,11 @@ Item {
         case "calendar": return cfg.showCalendar !== false
         case "reminders": return !!cfg.showReminders
         case "news": return !!cfg.showNews
+        case "audio": return !!cfg.showAudio && !!sys
+        case "bluetooth": return !!cfg.showBluetooth && !!sys
+        case "top": return !!cfg.showTop && !!sys
+        case "gpu": return !!cfg.showGpu && !!sys
+        case "shortcuts": return !!cfg.showShortcuts && !!sys
         default: return true
         }
     }
@@ -65,7 +75,7 @@ Item {
     readonly property var hiddenEnabled: hiddenIds.filter(id => cardOn(id))
 
     function applyLayout(text) {
-        let cols = defaultCols.map(c => c.slice()), weights = defaultWeights.slice(), hidden = []
+        let cols = defaultCols.map(c => c.slice()), weights = defaultWeights.slice(), hidden = newIds.slice()
         try {
             const o = JSON.parse(text)
             if (Array.isArray(o.cols) && o.cols.length > 0 && o.cols.length <= 8) {
@@ -128,7 +138,7 @@ Item {
         colIds = cols
         persist()
     }
-    function resetLayout() { colIds = defaultCols.map(c => c.slice()); colW = defaultWeights.slice(); hiddenIds = []; persist() }
+    function resetLayout() { colIds = defaultCols.map(c => c.slice()); colW = defaultWeights.slice(); hiddenIds = newIds.slice(); persist() }
 
     // Arrasto de um cartão (coordenadas do Shell).
     property string dragId: ""
@@ -177,13 +187,18 @@ Item {
     }
 
     // ── Cartões ────────────────────────────────────────────────────────────
-    Component { id: compSystem; SystemCard { t: shell.t; dash: shell.dash } }
+    Component { id: compSystem; SystemCard { t: shell.t; dash: shell.dash; sys: shell.sys } }
     Component { id: compDevices; ConnectionsCard { t: shell.t; dash: shell.dash } }
     Component { id: compNetwork; NetworkCard { t: shell.t; net: shell.net } }
     Component { id: compMedia; MediaCard { t: shell.t; media: shell.media } }
     Component { id: compCalendar; CalendarCard { t: shell.t; events: shell.events; feedConfigured: shell.feedConfigured; feedStatus: shell.feedStatus } }
     Component { id: compReminders; RemindersCard { t: shell.t; stored: shell.cfg.reminders || "[]"; onSave: json => shell.saveReminders(json) } }
     Component { id: compNews; NewsCard { t: shell.t; dash: shell.dash } }
+    Component { id: compAudio; AudioCard { t: shell.t; sys: shell.sys } }
+    Component { id: compBluetooth; BluetoothCard { t: shell.t; sys: shell.sys } }
+    Component { id: compTop; TopCard { t: shell.t; sys: shell.sys } }
+    Component { id: compGpu; GpuCard { t: shell.t; sys: shell.sys; dash: shell.dash } }
+    Component { id: compShortcuts; ShortcutsCard { t: shell.t; sys: shell.sys; stored: shell.cfg.shortcuts || "[]"; onSave: json => shell.saveShortcuts(json) } }
     Component { id: compChat; ChatView { id: wideChatView; t: shell.t; client: shell.client; Component.onCompleted: shell.wideChat = wideChatView } }
     function factory(id) {
         switch (id) {
@@ -195,6 +210,11 @@ Item {
         case "reminders": return compReminders
         case "news": return compNews
         case "chat": return compChat
+        case "audio": return compAudio
+        case "bluetooth": return compBluetooth
+        case "top": return compTop
+        case "gpu": return compGpu
+        case "shortcuts": return compShortcuts
         }
         return null
     }
