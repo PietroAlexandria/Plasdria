@@ -50,6 +50,11 @@
     <entry name="shortcuts" type="String"><default>[]</default></entry>
     <entry name="welcomeSeen" type="Int"><default>0</default></entry>
     <entry name="clockState" type="String"><default></default></entry>
+    <entry name="alertsEnabled" type="Bool"><default>true</default></entry>
+    <entry name="alertBattery" type="Int"><default>20</default></entry>
+    <entry name="alertDisk" type="Int"><default>90</default></entry>
+    <entry name="alertTemp" type="Int"><default>85</default></entry>
+    <entry name="alertOffline" type="Int"><default>45</default></entry>
     <entry name="pomodoroFocus" type="Int"><default>25</default></entry>
     <entry name="pomodoroShort" type="Int"><default>5</default></entry>
     <entry name="pomodoroLong" type="Int"><default>15</default></entry>

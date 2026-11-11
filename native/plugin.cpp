@@ -60,6 +60,13 @@ public:
         emit dataChanged(index(i), index(i), {Files});
     }
     void load(const QJsonArray &a) { beginResetModel(); rows=a; endResetModel(); }
+    // Descarta a mensagem `from` e tudo que vem depois.
+    void truncate(int from) {
+        if (from < 0 || from >= rows.size()) return;
+        beginRemoveRows({}, from, rows.size() - 1);
+        while (rows.size() > from) rows.removeLast();
+        endRemoveRows();
+    }
 };
 
 
@@ -568,6 +575,27 @@ public:
         if (m_provider == "ollama") return startOllamaTurn(question, pendingAttachments);
         if (m_provider == "custom") return startCustomApiTurn(question, pendingAttachments);
         return startTurn(QJsonObject{{"type","user"},{"message",QJsonObject{{"role","user"},{"content",content}}}});
+    }
+    // Refaz a resposta a uma pergunta (regenerar) ou a troca por outro texto (editar). A pergunta e tudo
+    // depois dela saem da conversa; o que veio antes segue como contexto de uma conversa nova no provedor.
+    // Anexos da pergunta original não são reenviados.
+    Q_INVOKABLE bool resend(const QString &messageId, const QString &newText = {}) {
+        if (m_busy || m_conversationLoading || !ready()) return false;
+        int i = m_messages.find(messageId);
+        if (i < 0) return false;
+        // Em uma resposta da IA, a pergunta é a mensagem do usuário logo antes dela.
+        while (i >= 0 && m_messages.rows[i].toObject()["speaker"].toString() != "user") --i;
+        if (i < 0) return false;
+        const QString original = m_messages.rows[i].toObject()["body"].toString();
+        const QString question = newText.trimmed().isEmpty() ? original : newText.trimmed();
+        if (question.trimmed().isEmpty()) return false;
+        m_messages.truncate(i);
+        m_thread.clear(); m_threadCwd.clear(); m_restoreThread.clear();
+        m_nativeThread.clear(); m_nativeThreadCwd.clear(); m_nativeThreadProvider.clear();
+        m_importRows = m_messages.rows;
+        m_attachments.clear(); m_error.clear();
+        saveChatState(); emit attachmentsChanged();
+        return send(question);
     }
     Q_INVOKABLE void stop() {
         if(!m_busy) return;

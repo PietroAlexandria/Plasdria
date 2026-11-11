@@ -221,6 +221,47 @@ private slots:
         QCOMPARE(history().size(), 2);
         QCOMPARE(history().first().toMap()["source"].toString(), QString("Pragus"));
     }
+    void regenerateRedoesLastAnswerWithPreviousContext() {
+        QVERIFY(send("Primeira"));
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+        QVERIFY(send("Segunda"));
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+        QCOMPARE(messages()->rowCount(), 4);
+        // Regenerar a partir da resposta: pega a pergunta que veio antes dela.
+        const QString answerId = messages()->data(messages()->index(3, 0), Qt::UserRole + 3).toString();
+        QVERIFY(callBool("resend", answerId));
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+        QCOMPARE(messages()->rowCount(), 4);
+        QCOMPARE(allBodies(), QString("Primeira\nResposta: Primeira\nSegunda\nResposta: Segunda"));
+        // O que veio antes segue como contexto de uma conversa nova; a pergunta refeita vai junto.
+        const auto content = lastUserContent();
+        QCOMPARE(content.size(), 2);
+        QVERIFY(content[0].toObject()["text"].toString().contains("Primeira"));
+        QVERIFY(!content[0].toObject()["text"].toString().contains("Segunda"));
+        QCOMPARE(content[1].toObject()["text"].toString(), QString("Segunda"));
+    }
+    void editReplacesQuestionAndDropsLaterMessages() {
+        QVERIFY(send("Original"));
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+        QVERIFY(send("Depois"));
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+        const QString firstId = messages()->data(messages()->index(0, 0), Qt::UserRole + 3).toString();
+        bool accepted = false;
+        QVERIFY(QMetaObject::invokeMethod(m_client.get(), "resend", Q_RETURN_ARG(bool, accepted), Q_ARG(QString, firstId), Q_ARG(QString, "  Editada  ")));
+        QVERIFY(accepted);
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+        QCOMPARE(allBodies(), QString("Editada\nResposta: Editada"));
+        QCOMPARE(lastUserContent().size(), 1);   // nada antes: não há contexto a reenviar
+    }
+    void resendIsRefusedWhileBusyOrForUnknownMessage() {
+        QVERIFY(!callBool("resend", "inexistente"));
+        QVERIFY(send("algo demorado"));
+        QTRY_VERIFY_WITH_TIMEOUT(flag("busy"), 10000);
+        const QString id = messages()->data(messages()->index(0, 0), Qt::UserRole + 3).toString();
+        QVERIFY(!callBool("resend", id));
+        QVERIFY(invoke("stop"));
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+    }
     void restartRecoversLastConversationAndQuota() {
         QVERIFY(send("Lembre de mim"));
         QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);

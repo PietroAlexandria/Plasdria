@@ -19,6 +19,11 @@ KCM.SimpleKCM {
     property alias cfg_customModel: customModel.text
     property string cfg_newsTopic
     property alias cfg_calendarUrls: calendarUrls.text
+    property alias cfg_alertsEnabled: alertsOn.checked
+    property alias cfg_alertBattery: alertBattery.value
+    property alias cfg_alertDisk: alertDisk.value
+    property alias cfg_alertTemp: alertTemp.value
+    property alias cfg_alertOffline: alertOffline.value
     property alias cfg_pomodoroFocus: pomFocus.value
     property alias cfg_pomodoroShort: pomShort.value
     property alias cfg_pomodoroLong: pomLong.value
@@ -249,6 +254,19 @@ KCM.SimpleKCM {
         QQC2.SpinBox { id: pomLong; Kirigami.FormData.label: "Pausa longa:"; from: 1; to: 120; textFromValue: v => v + " min"; valueFromText: t => parseInt(t) || 15 }
         QQC2.Label {
             text: "A pausa longa vem depois de 4 focos. Os avisos aparecem como notificações do sistema, mesmo com o painel fechado."
+            wrapMode: Text.Wrap; opacity: 0.7
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 22
+        }
+
+        Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: "Alertas do sistema" }
+
+        QQC2.CheckBox { id: alertsOn; Kirigami.FormData.label: "Avisos:"; text: "Notificar quando algo precisar de atenção" }
+        QQC2.SpinBox { id: alertBattery; enabled: alertsOn.checked; Kirigami.FormData.label: "Bateria baixa:"; from: 0; to: 50; textFromValue: v => v === 0 ? "desligado" : v + "%"; valueFromText: t => parseInt(t) || 0 }
+        QQC2.SpinBox { id: alertDisk; enabled: alertsOn.checked; Kirigami.FormData.label: "Disco cheio:"; from: 0; to: 100; textFromValue: v => v === 0 ? "desligado" : v + "%"; valueFromText: t => parseInt(t) || 0 }
+        QQC2.SpinBox { id: alertTemp; enabled: alertsOn.checked; Kirigami.FormData.label: "CPU quente:"; from: 0; to: 110; textFromValue: v => v === 0 ? "desligado" : v + " °C"; valueFromText: t => parseInt(t) || 0 }
+        QQC2.SpinBox { id: alertOffline; enabled: alertsOn.checked; Kirigami.FormData.label: "Sem internet:"; from: 0; to: 600; stepSize: 15; textFromValue: v => v === 0 ? "desligado" : "após " + v + " s"; valueFromText: t => parseInt(t) || 0 }
+        QQC2.Label {
+            text: "Cada aviso aparece uma vez e só volta depois que o valor se recupera. Funcionam com o painel fechado. A temperatura depende do sensor do seu computador."
             wrapMode: Text.Wrap; opacity: 0.7
             Layout.preferredWidth: Kirigami.Units.gridUnit * 22
         }

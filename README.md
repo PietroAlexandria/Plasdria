@@ -23,7 +23,7 @@ Um widget para KDE Plasma 6 com chat integrado ao **Antigravity**, **Claude** e 
 | --- | --- |
 | **Painel geral** | A base do widget: logo do Plasdria, horário, saudação, data e clima resumido (temperatura, máxima/mínima, cidade e condição). Ao lado, um resumo do que importa agora: cota da IA ativa (clique para alternar entre IAs), lembretes pendentes, bateria, internet, música tocando (clique para pausar) e uso do computador. |
 | **Rodapé do clima** | Detalhes de hoje (sensação, umidade, vento, chuva, UV e sol), as próximas horas e a semana, com chance de chuva. |
-| **Chat multi-IA** | Alterne a qualquer momento entre **Antigravity** (`agy`), **Claude** (`claude`), **Codex** (`codex`), **Gemini CLI** (`gemini`), **Ollama** (modelos locais em `localhost:11434`) e **API Compatível** (OpenAI, OpenRouter, Groq, DeepSeek, LM Studio) pelo seletor no topo do chat ou com `/ia <nome>`. Se trocar de IA no meio de uma conversa, o histórico na tela é mantido e enviado como contexto para a outra IA continuar de onde parou. Respostas em tempo real e formatadas (Markdown), escolha de modelo e nível de esforço, anexos de imagens/arquivos e histórico com busca e importação de conversas. |
+| **Chat multi-IA** | Alterne a qualquer momento entre **Antigravity** (`agy`), **Claude** (`claude`), **Codex** (`codex`), **Gemini CLI** (`gemini`), **Ollama** (modelos locais em `localhost:11434`) e **API Compatível** (OpenAI, OpenRouter, Groq, DeepSeek, LM Studio) pelo seletor no topo do chat ou com `/ia <nome>`. Se trocar de IA no meio de uma conversa, o histórico na tela é mantido e enviado como contexto para a outra IA continuar de onde parou. Respostas em tempo real e formatadas (Markdown), escolha de modelo e nível de esforço, anexos de imagens/arquivos e histórico com busca e importação de conversas. Passe o mouse sobre uma mensagem para **gerar a última resposta de novo** ou **editar uma pergunta** e refazer dali em diante (o que veio antes segue como contexto; anexos não são reenviados). |
 | **Cotas** | Barras da cota de 5 horas e semanal para Antigravity (separadas por família de modelo: Gemini 4 Argon, Gemini e Claude/GPT) e Claude Code, com o tempo até renovar. O ícone do painel mostra a cota de 5 h em um anel. |
 | **Música** | Qualquer player compatível com MPRIS (Spotify, YouTube no navegador, VLC, Elisa…): capa, título, artista, barra de progresso clicável, tocar/pausar, anterior, próxima, aleatório, repetir e volume. O Spotify tem prioridade e um botão para abrir. A última música fica lembrada com a capa guardada: com o player fechado ou sem internet ela continua aparecendo, e um clique abre o Spotify e retoma do ponto em que parou. |
 | **Rede** | Nome da rede, sinal do Wi-Fi, IP local, latência e gráfico de download/upload em tempo real. |
@@ -59,6 +59,7 @@ Clique com o botão direito no widget → **Configurar Plasdria…**
 - **Geral** — seu nome para a saudação, links iCal da agenda (um por linha), cidade (busca por nome) ou detecção automática, IA padrão (Antigravity, Claude, Codex, Gemini CLI, Ollama ou API Compatível), modelo e esforço padrão, endpoint/chave para API compatível e tema das notícias.
 - **Cartões** — escolha quais cartões aparecem (a posição de cada um se edita no próprio widget).
 - **Aparência** — tema escuro, claro ou do sistema (acompanha o Plasma), cor de destaque, opacidade do fundo e animações.
+- **Alertas do sistema** — notificação única quando a bateria fica baixa (e não está na tomada), o disco enche, a CPU esquenta ou a internet cai (e quando volta). Limites configuráveis em Configurar → Geral, 0 desliga cada um; cada aviso só repete depois que o valor se recupera.
 - **Atalhos de teclado** — defina um atalho global para abrir o chat (página padrão do Plasma).
 
 ## Instalação
@@ -99,7 +100,7 @@ O projeto já vem configurado para o **VS Code** (`.vscode/`): abra a pasta e us
 | --- | --- |
 | Compilar | Gera o plugin nativo e o pacote `plasdria.plasmoid` |
 | Instalar no Plasma | Compila e instala/atualiza o widget |
-| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, a edição do layout e os cartões novos com mouse simulado, e o teste de velocidade contra um servidor local de mentira |
+| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, a edição do layout, os alertas, as mensagens (regenerar/editar) e os cartões novos com mouse simulado, e o teste de velocidade contra um servidor local de mentira |
 | Prévia (capturas) | Renderiza o widget fora do Plasma e salva PNGs em `build/preview/` |
 
 Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6 tools/preview.qml -- <pasta> [--sem-rede]`.

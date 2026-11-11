@@ -145,6 +145,21 @@ PlasmoidItem {
         Component.onCompleted: load(root.cfg.clockState || "")
     }
     Backend.NetworkClient { id: netBackend }
+    // Alertas do sistema (bateria, disco, temperatura, internet), com limites nas configurações.
+    AlertEngine {
+        id: alertEngine
+        enabled: root.cfg.alertsEnabled === undefined ? true : root.cfg.alertsEnabled
+        batteryLow: root.cfg.alertBattery === undefined ? 20 : root.cfg.alertBattery
+        diskFull: root.cfg.alertDisk === undefined ? 90 : root.cfg.alertDisk
+        tempHigh: root.cfg.alertTemp === undefined ? 85 : root.cfg.alertTemp
+        offlineSeconds: root.cfg.alertOffline === undefined ? 45 : root.cfg.alertOffline
+        battery: dashBackend.batteryPercent
+        charging: dashBackend.batteryStatus !== "Discharging"
+        disk: dashBackend.storageUsage
+        temp: Number(dashBackend.systemDetails.cpuTemp) || -1
+        online: netBackend.online
+        onNotify: (title, body) => dashBackend.notify(title, body)
+    }
 
     Plasmoid.contextualActions: [
         PlasmaCore.Action {
