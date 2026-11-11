@@ -7,6 +7,9 @@ Card {
     id: card
     required property var sys
     title: "Áudio e brilho"
+    // Só lê o áudio e o brilho enquanto o cartão está na tela.
+    Component.onCompleted: { sys.acquire("audio"); sys.acquire("brightness") }
+    Component.onDestruction: { sys.release("audio"); sys.release("brightness") }
     icon: "audio-volume-high-symbolic"
 
     readonly property real volume: sys.audioVolume

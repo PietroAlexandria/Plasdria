@@ -19,6 +19,9 @@ KCM.SimpleKCM {
     property alias cfg_customModel: customModel.text
     property string cfg_newsTopic
     property alias cfg_calendarUrls: calendarUrls.text
+    property alias cfg_pomodoroFocus: pomFocus.value
+    property alias cfg_pomodoroShort: pomShort.value
+    property alias cfg_pomodoroLong: pomLong.value
     property bool cfg_customApiKeyInVault
     property bool cfg_calendarUrlsInVault
     property alias cfg_eventLeadMinutes: eventLead.value
@@ -235,6 +238,17 @@ KCM.SimpleKCM {
         }
         QQC2.Label {
             text: "Um link por linha. No Google Agenda: Configurações da agenda → “Endereço secreto no formato iCal”. Esse endereço dá acesso à sua agenda: não o compartilhe. Os eventos aparecem no calendário e atualizam a cada 15 minutos."
+            wrapMode: Text.Wrap; opacity: 0.7
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 22
+        }
+
+        Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: "Pomodoro" }
+
+        QQC2.SpinBox { id: pomFocus; Kirigami.FormData.label: "Foco:"; from: 1; to: 180; textFromValue: v => v + " min"; valueFromText: t => parseInt(t) || 25 }
+        QQC2.SpinBox { id: pomShort; Kirigami.FormData.label: "Pausa curta:"; from: 1; to: 60; textFromValue: v => v + " min"; valueFromText: t => parseInt(t) || 5 }
+        QQC2.SpinBox { id: pomLong; Kirigami.FormData.label: "Pausa longa:"; from: 1; to: 120; textFromValue: v => v + " min"; valueFromText: t => parseInt(t) || 15 }
+        QQC2.Label {
+            text: "A pausa longa vem depois de 4 focos. Os avisos aparecem como notificações do sistema, mesmo com o painel fechado."
             wrapMode: Text.Wrap; opacity: 0.7
             Layout.preferredWidth: Kirigami.Units.gridUnit * 22
         }

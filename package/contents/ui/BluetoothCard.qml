@@ -7,6 +7,8 @@ Card {
     id: card
     required property var sys
     title: "Bluetooth"
+    Component.onCompleted: sys.acquire("bluetooth")
+    Component.onDestruction: sys.release("bluetooth")
     icon: "preferences-system-bluetooth-symbolic"
 
     actions: [

@@ -90,21 +90,18 @@ QString pciName(const QString &pciId) {
 
 SystemClient::SystemClient(QObject *parent) : QObject(parent) {
     findBacklight();
-    findGpu();
 
-    m_audioTimer.setInterval(2000);
+    // Nenhum temporizador liga sozinho: veja acquire()/apply().
+    m_audioTimer.setInterval(60000);          // só uma rede de segurança: o áudio é atualizado por eventos
     connect(&m_audioTimer, &QTimer::timeout, this, &SystemClient::pollAudio);
-    m_audioTimer.start();
-    m_brightnessTimer.setInterval(2000);
+    m_audioDebounce.setSingleShot(true); m_audioDebounce.setInterval(150);
+    connect(&m_audioDebounce, &QTimer::timeout, this, &SystemClient::pollAudio);
+    m_brightnessTimer.setInterval(3000);
     connect(&m_brightnessTimer, &QTimer::timeout, this, &SystemClient::pollBrightness);
-    m_brightnessTimer.start();
     m_btTimer.setInterval(5000);
     connect(&m_btTimer, &QTimer::timeout, this, &SystemClient::pollBluetooth);
-    m_btTimer.start();
     m_gpuTimer.setInterval(2000);
     connect(&m_gpuTimer, &QTimer::timeout, this, &SystemClient::sampleGpu);
-    m_gpuActive = true;
-    m_gpuTimer.start();
     m_topTimer.setInterval(3000);
     connect(&m_topTimer, &QTimer::timeout, this, &SystemClient::sampleProcesses);
 
@@ -125,8 +122,93 @@ SystemClient::SystemClient(QObject *parent) : QObject(parent) {
         QDBusConnection::systemBus().asyncCall(message, 3000);
         m_pendingBrightness = -1;
     });
+}
 
-    pollAudio(); pollBrightness(); pollBluetooth(); sampleGpu();
+SystemClient::~SystemClient() {
+    if (!m_audioEvents) return;
+    m_audioEvents->disconnect(this);
+    m_audioEvents->kill();
+    m_audioEvents->waitForFinished(500);
+}
+
+// ── Quem precisa de quê ───────────────────────────────────────────────────
+void SystemClient::acquire(const QString &topic) {
+    if (++m_users[topic] == 1) apply(topic);
+}
+
+void SystemClient::release(const QString &topic) {
+    auto it = m_users.find(topic);
+    if (it == m_users.end() || it.value() == 0) return;
+    if (--it.value() == 0) apply(topic);
+}
+
+void SystemClient::setActive(bool on) {
+    if (on == m_active) return;
+    m_active = on;
+    for (auto it = m_users.cbegin(); it != m_users.cend(); ++it) apply(it.key());
+    emit activeChanged();
+}
+
+// Liga ou desliga as leituras de um assunto conforme haja interessados e o widget esteja ativo.
+void SystemClient::apply(const QString &topic) {
+    const bool want = m_active && m_users.value(topic) > 0;
+    if (topic == "audio") {
+        if (want && !m_audioTimer.isActive()) { pollAudio(); m_audioTimer.start(); startAudioEvents(); }
+        else if (!want) { m_audioTimer.stop(); m_audioDebounce.stop(); stopAudioEvents(); }
+    } else if (topic == "brightness") {
+        if (want && !m_brightnessTimer.isActive()) { pollBrightness(); m_brightnessTimer.start(); }
+        else if (!want) m_brightnessTimer.stop();
+    } else if (topic == "bluetooth") {
+        if (want && !m_btTimer.isActive()) { pollBluetooth(); m_btTimer.start(); }
+        else if (!want) m_btTimer.stop();
+    } else if (topic == "gpu") {
+        if (want && !m_gpuTimer.isActive()) {
+            if (!m_gpuLoaded) { m_gpuLoaded = true; findGpu(); }
+            m_prevRc6 = -1;   // a estimativa de uso precisa de duas leituras seguidas
+            sampleGpu(); m_gpuTimer.start();
+        } else if (!want) m_gpuTimer.stop();
+    } else if (topic == "top") {
+        if (want && !m_topActive) {
+            m_topActive = true; m_prevJiffies.clear(); m_prevTopAt = 0;
+            sampleProcesses(); m_topTimer.start();
+            emit topChanged();
+        } else if (!want && m_topActive) {
+            m_topActive = false; m_topTimer.stop();
+            emit topChanged();
+        }
+    }
+}
+
+// O áudio é atualizado quando o sistema avisa (pactl subscribe), não por consulta periódica.
+void SystemClient::startAudioEvents() {
+    if (m_audioEvents) return;
+    auto *process = new QProcess(this);
+    m_audioEvents = process;
+    connect(process, &QProcess::readyReadStandardOutput, this, [this, process] {
+        for (const QByteArray &line : process->readAllStandardOutput().split('\n')) {
+            // "Event 'change' on sink #53", "Event 'change' on server": volume, mudo e saída padrão
+            if (line.contains(" on sink #") || line.contains(" on server")) m_audioDebounce.start();
+        }
+    });
+    connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this, process](int, QProcess::ExitStatus) {
+        process->deleteLater();
+        if (m_audioEvents == process) m_audioEvents = nullptr;
+        if (m_active && m_users.value("audio") > 0) QTimer::singleShot(3000, this, &SystemClient::startAudioEvents);
+    });
+    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError e) {
+        if (e == QProcess::FailedToStart) { process->deleteLater(); if (m_audioEvents == process) m_audioEvents = nullptr; }
+    });
+    process->start("pactl", {"subscribe"});
+}
+
+void SystemClient::stopAudioEvents() {
+    if (!m_audioEvents) return;
+    QProcess *process = m_audioEvents;
+    m_audioEvents = nullptr;
+    process->disconnect(this);
+    process->terminate();
+    connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), process, &QObject::deleteLater);
+    QTimer::singleShot(1500, process, [process] { if (process->state() != QProcess::NotRunning) process->kill(); });
 }
 
 // ── Execução de pactl ─────────────────────────────────────────────────────
@@ -147,12 +229,13 @@ void SystemClient::run(const QStringList &args, std::function<void(const QByteAr
 
 // ── Áudio ─────────────────────────────────────────────────────────────────
 void SystemClient::pollAudio() {
-    if (m_audioBusy) return;
+    if (m_audioBusy) { m_audioDirty = true; return; }
     m_audioBusy = true;
     run({"-f", "json", "info"}, [this](const QByteArray &info) {
         const QString defaultSink = QJsonDocument::fromJson(info).object().value("default_sink_name").toString();
         run({"-f", "json", "list", "sinks"}, [this, defaultSink](const QByteArray &out) {
             m_audioBusy = false;
+            if (m_audioDirty) { m_audioDirty = false; QTimer::singleShot(0, this, &SystemClient::pollAudio); }
             const QJsonArray sinks = QJsonDocument::fromJson(out).array();
             QVariantList list;
             bool found = false;
@@ -349,18 +432,8 @@ void SystemClient::toggleBluetoothDevice(const QString &path) {
 }
 
 // ── Processos ─────────────────────────────────────────────────────────────
-void SystemClient::acquireTop() {
-    if (++m_topUsers != 1) return;
-    m_topActive = true; m_prevJiffies.clear(); m_prevTopAt = 0;
-    sampleProcesses(); m_topTimer.start();
-    emit topChanged();
-}
-
-void SystemClient::releaseTop() {
-    if (m_topUsers == 0 || --m_topUsers != 0) return;
-    m_topActive = false; m_topTimer.stop();
-    emit topChanged();
-}
+void SystemClient::acquireTop() { acquire("top"); }
+void SystemClient::releaseTop() { release("top"); }
 
 void SystemClient::sampleProcesses() {
     const double ticks = double(sysconf(_SC_CLK_TCK)), page = double(sysconf(_SC_PAGESIZE));
@@ -411,12 +484,6 @@ void SystemClient::sampleProcesses() {
 }
 
 // ── GPU ───────────────────────────────────────────────────────────────────
-void SystemClient::setGpuActive(bool on) {
-    m_gpuActive = on;
-    if (on) m_gpuTimer.start(); else m_gpuTimer.stop();
-    emit gpuChanged();
-}
-
 void SystemClient::findGpu() {
     const QDir drm("/sys/class/drm");
     int best = -1;

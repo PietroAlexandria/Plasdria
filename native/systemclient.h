@@ -35,7 +35,6 @@ class SystemClient : public QObject {
     Q_PROPERTY(QVariantList topCpu READ topCpu NOTIFY topChanged)             // [{name, cpu, memory, count}]
     Q_PROPERTY(QVariantList topMemory READ topMemory NOTIFY topChanged)
     // GPU
-    Q_PROPERTY(bool gpuActive READ gpuActive WRITE setGpuActive NOTIFY gpuChanged)
     Q_PROPERTY(QString gpuName READ gpuName NOTIFY gpuChanged)
     Q_PROPERTY(QString gpuDriver READ gpuDriver NOTIFY gpuChanged)
     Q_PROPERTY(double gpuUsage READ gpuUsage NOTIFY gpuChanged)               // %, -1 se desconhecido
@@ -45,8 +44,19 @@ class SystemClient : public QObject {
     Q_PROPERTY(double gpuMemoryUsed READ gpuMemoryUsed NOTIFY gpuChanged)     // bytes, -1
     Q_PROPERTY(double gpuMemoryTotal READ gpuMemoryTotal NOTIFY gpuChanged)
     Q_PROPERTY(QVariantList gpuHistory READ gpuHistory NOTIFY gpuChanged)     // últimas amostras de uso (%)
+    // false (ex.: painel recolhido) pausa todas as leituras; elas voltam sozinhas quando fica true.
+    Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 public:
     explicit SystemClient(QObject *parent = nullptr);
+    ~SystemClient() override;
+
+    bool active() const { return m_active; }
+    void setActive(bool on);
+    // Quem mostra dados avisa que precisa deles: "audio", "brightness", "bluetooth", "gpu" ou "top".
+    // As leituras só rodam enquanto houver pelo menos um interessado (recriar um cartão adquire o novo
+    // antes de liberar o antigo, então nunca chega a zero).
+    Q_INVOKABLE void acquire(const QString &topic);
+    Q_INVOKABLE void release(const QString &topic);
 
     bool audioAvailable() const { return m_audioAvailable; }
     double audioVolume() const { return m_audioVolume; }
@@ -66,8 +76,6 @@ public:
     Q_INVOKABLE void releaseTop();
     QVariantList topCpu() const { return m_topCpu; }
     QVariantList topMemory() const { return m_topMemory; }
-    bool gpuActive() const { return m_gpuActive; }
-    void setGpuActive(bool on);
     QString gpuName() const { return m_gpuName; }
     QString gpuDriver() const { return m_gpuDriver; }
     double gpuUsage() const { return m_gpuUsage; }
@@ -90,6 +98,7 @@ public:
     Q_INVOKABLE bool launch(const QString &target);
 
 signals:
+    void activeChanged();
     void audioChanged();
     void brightnessChanged();
     void bluetoothChanged();
@@ -97,6 +106,9 @@ signals:
     void gpuChanged();
 
 private:
+    void apply(const QString &topic);
+    void startAudioEvents();
+    void stopAudioEvents();
     void pollAudio();
     void pollBrightness();
     void pollBluetooth();
@@ -106,6 +118,11 @@ private:
     void findGpu();
     void run(const QStringList &args, std::function<void(const QByteArray &)> done = {});
 
+    bool m_active = true;
+    QHash<QString, int> m_users;
+    QProcess *m_audioEvents = nullptr;
+    QTimer m_audioDebounce;
+    bool m_audioDirty = false;
     QTimer m_audioTimer, m_brightnessTimer, m_btTimer, m_topTimer, m_gpuTimer, m_applyAudio, m_applyBrightness;
     // áudio
     bool m_audioAvailable = false, m_audioMuted = false, m_audioBusy = false;
@@ -126,7 +143,7 @@ private:
     QHash<qint64, qint64> m_prevJiffies;
     qint64 m_prevTopAt = 0;
     // GPU
-    bool m_gpuActive = false;
+    bool m_gpuLoaded = false;
     QString m_gpuName, m_gpuDriver, m_gpuDir;
     double m_gpuUsage = -1, m_gpuFreq = -1, m_gpuFreqMax = -1, m_gpuTemp = -1, m_gpuMemUsed = -1, m_gpuMemTotal = -1;
     qint64 m_prevRc6 = -1, m_prevRc6At = 0;

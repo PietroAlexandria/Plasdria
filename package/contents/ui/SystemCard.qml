@@ -6,6 +6,9 @@ Card {
     id: card
     required property var dash
     property var sys: null
+    // O anel de GPU precisa da leitura enquanto o cartão está na tela.
+    Component.onCompleted: if (sys) sys.acquire("gpu")
+    Component.onDestruction: if (sys) sys.release("gpu")
     title: "Sistema"
     icon: "computer-symbolic"
     readonly property var d: dash.systemDetails || ({})

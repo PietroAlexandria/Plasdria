@@ -19,9 +19,11 @@ Item {
     required property var net
     required property var cfg
     property bool editing: false
+    property var clock: null        // motor do cronômetro/timer/pomodoro (ClockEngine)
     property var speed: null        // teste de velocidade (SpeedTestClient)
     property var sys: null          // controles do sistema (áudio, brilho, Bluetooth, processos, GPU, atalhos)
     signal saveShortcuts(string json)
+    signal welcomeDone()
     // Eventos das agendas iCal configuradas (veja IcsFeed.qml).
     property var events: []
     property bool feedConfigured: false
@@ -40,12 +42,12 @@ Item {
     }
 
     // ── Arranjo dos cartões ────────────────────────────────────────────────
-    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest"]
+    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock"]
     // Cartões novos começam ocultos: aparecem na barra de edição (＋) para você escolher onde ficam.
-    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest"]
+    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock"]
     readonly property var names: ({system: "Sistema", devices: "Dispositivos", network: "Rede", chat: "Chat · " + shell.client.providerName,
                                    media: "Música", calendar: "Calendário", reminders: "Lembretes", news: "Notícias",
-                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos", speedtest: "Teste de velocidade"})
+                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos", speedtest: "Teste de velocidade", clock: "Cronômetro e pomodoro"})
     readonly property var defaultCols: [["system", "devices", "network"], ["chat"], ["media", "calendar"], ["reminders", "news"]]
     readonly property var defaultWeights: [0.95, 1.35, 1, 1]
 
@@ -68,6 +70,7 @@ Item {
         case "gpu": return !!cfg.showGpu && !!sys
         case "shortcuts": return !!cfg.showShortcuts && !!sys
         case "speedtest": return !!cfg.showSpeedTest && !!speed
+        case "clock": return !!cfg.showClock && !!clock
         default: return true
         }
     }
@@ -142,6 +145,27 @@ Item {
     }
     function resetLayout() { colIds = defaultCols.map(c => c.slice()); colW = defaultWeights.slice(); hiddenIds = newIds.slice(); persist() }
 
+    // ── Boas-vindas: na primeira vez, escolher quais cartões novos mostrar ────────────────
+    // cfg.welcomeSeen vale 0 em instalações novas e depois de uma atualização com cartões novos;
+    // sem a propriedade (prévia e testes) nada aparece.
+    readonly property bool welcomeNeeded: cfg.welcomeSeen === 0
+    property bool welcomeDismissed: false
+    readonly property bool welcomeVisible: welcomeNeeded && !welcomeDismissed && sys !== null && !editing
+    readonly property var welcomeCards: [
+        {id: "audio", icon: "audio-volume-high-symbolic", text: "Volume, saída de áudio e brilho da tela"},
+        {id: "top", icon: "office-chart-bar-percentage-symbolic", text: "Quais programas mais usam CPU e memória"},
+        {id: "shortcuts", icon: "emblem-favorite-symbolic", text: "Apps, sites e pastas favoritos, com um toque"},
+        {id: "speedtest", icon: "speedometer-symbolic", text: "Mede latência, download e upload da conexão"},
+        {id: "clock", icon: "chronometer", text: "Voltas, contagem regressiva e ciclos de foco com aviso"},
+        {id: "gpu", icon: "monitor-symbolic", text: "Uso, frequência e memória da placa de vídeo"},
+        {id: "bluetooth", icon: "preferences-system-bluetooth-symbolic", text: "Dispositivos Bluetooth e bateria"}]
+    property var welcomePick: ({audio: true, top: true, shortcuts: true, clock: true})
+    function applyWelcome() {
+        for (const id of newIds) if (welcomePick[id]) showCard(id)
+        finishWelcome()
+    }
+    function finishWelcome() { welcomeDismissed = true; welcomeDone() }
+
     // Arrasto de um cartão (coordenadas do Shell).
     property string dragId: ""
     property real dragX: 0
@@ -177,6 +201,64 @@ Item {
         sourceComponent: shell.mode === "wide" ? wideLayout : shell.mode === "medium" ? mediumLayout : narrowLayout
     }
 
+    // Boas-vindas
+    Item {
+        id: welcome
+        visible: shell.welcomeVisible
+        anchors.fill: parent; z: 90
+        Rectangle { anchors.fill: parent; radius: 20; color: Qt.rgba(0, 0, 0, 0.6) }
+        MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }   // bloqueia o que está embaixo
+        Rectangle {
+            id: panel
+            anchors.centerIn: parent
+            width: Math.min(440, shell.width - 32); height: Math.min(panelColumn.implicitHeight + 36, shell.height - 32)
+            radius: shell.t.radius; color: shell.t.card; border.color: shell.t.accentLine; border.width: 1
+            Flickable {
+                anchors.fill: parent; anchors.margins: 18
+                contentHeight: panelColumn.implicitHeight; clip: true; boundsBehavior: Flickable.StopAtBounds
+                ColumnLayout {
+                    id: panelColumn
+                    width: parent.width; spacing: 10
+                    Text { text: "Novidades no Plasdria"; color: shell.t.ink; font.pixelSize: 18; font.weight: Font.DemiBold }
+                    Text { text: "Escolha os cartões que você quer ver. Dá para mudar isso a qualquer hora em ✎ Editar."; color: shell.t.muted; font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                    Repeater {
+                        model: shell.welcomeCards
+                        delegate: Rectangle {
+                            id: row
+                            required property var modelData
+                            readonly property bool picked: !!shell.welcomePick[modelData.id]
+                            Layout.fillWidth: true; implicitHeight: 40; radius: 9
+                            color: rowHover.hovered ? shell.t.cardRaised : "transparent"
+                            border.color: picked ? shell.t.accentLine : shell.t.border
+                            HoverHandler { id: rowHover; cursorShape: Qt.PointingHandCursor }
+                            TapHandler { onTapped: { const p = Object.assign({}, shell.welcomePick); p[row.modelData.id] = !p[row.modelData.id]; shell.welcomePick = p } }
+                            RowLayout {
+                                anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; spacing: 10
+                                Rectangle {
+                                    width: 18; height: 18; radius: 9
+                                    color: row.picked ? shell.t.accent : "transparent"; border.color: row.picked ? shell.t.accent : shell.t.faint; border.width: 1.5
+                                    Kirigami.Icon { anchors.centerIn: parent; visible: row.picked; source: "checkmark"; width: 12; height: 12; isMask: true; color: "#101119" }
+                                }
+                                Kirigami.Icon { source: row.modelData.icon; implicitWidth: 18; implicitHeight: 18; isMask: true; color: shell.t.accent }
+                                ColumnLayout {
+                                    spacing: 0; Layout.fillWidth: true
+                                    Text { text: shell.names[row.modelData.id]; color: shell.t.ink; font.pixelSize: 12; font.weight: Font.DemiBold; Layout.fillWidth: true; elide: Text.ElideRight }
+                                    Text { text: row.modelData.text; color: shell.t.muted; font.pixelSize: 10; Layout.fillWidth: true; elide: Text.ElideRight }
+                                }
+                            }
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true; Layout.topMargin: 4; spacing: 8
+                        Chip { text: "Adicionar selecionados"; solid: true; onClicked: shell.applyWelcome() }
+                        Chip { text: "Agora não"; muted: true; onClicked: shell.finishWelcome() }
+                        Item { Layout.fillWidth: true }
+                    }
+                }
+            }
+        }
+    }
+
     // Cartão sendo arrastado.
     Rectangle {
         visible: shell.dragId !== ""
@@ -200,6 +282,7 @@ Item {
     Component { id: compBluetooth; BluetoothCard { t: shell.t; sys: shell.sys } }
     Component { id: compTop; TopCard { t: shell.t; sys: shell.sys } }
     Component { id: compGpu; GpuCard { t: shell.t; sys: shell.sys; dash: shell.dash } }
+    Component { id: compClock; ClockCard { t: shell.t; clock: shell.clock } }
     Component { id: compSpeedTest; SpeedTestCard { t: shell.t; speed: shell.speed } }
     Component { id: compShortcuts; ShortcutsCard { t: shell.t; sys: shell.sys; stored: shell.cfg.shortcuts || "[]"; onSave: json => shell.saveShortcuts(json) } }
     Component { id: compChat; ChatView { id: wideChatView; t: shell.t; client: shell.client; Component.onCompleted: shell.wideChat = wideChatView } }
@@ -219,6 +302,7 @@ Item {
         case "gpu": return compGpu
         case "shortcuts": return compShortcuts
         case "speedtest": return compSpeedTest
+        case "clock": return compClock
         }
         return null
     }

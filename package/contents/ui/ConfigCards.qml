@@ -18,6 +18,7 @@ KCM.SimpleKCM {
     property alias cfg_showGpu: gpu.checked
     property alias cfg_showShortcuts: shortcuts.checked
     property alias cfg_showSpeedTest: speedtest.checked
+    property alias cfg_showClock: clockCard.checked
 
     Kirigami.FormLayout {
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: "Cartões visíveis" }
@@ -35,6 +36,7 @@ KCM.SimpleKCM {
         QQC2.CheckBox { id: gpu; text: "GPU (uso, frequência e memória)" }
         QQC2.CheckBox { id: shortcuts; text: "Atalhos (aplicativos, sites e pastas)" }
         QQC2.CheckBox { id: speedtest; text: "Teste de velocidade da internet" }
+        QQC2.CheckBox { id: clockCard; text: "Cronômetro, timer e pomodoro" }
         QQC2.Label {
             text: "O chat fica sempre visível. Os cartões novos (áudio, Bluetooth, consumidores, GPU, atalhos e teste de velocidade) começam ocultos no layout: use ✎ Editar e toque em ＋ para colocá-los onde quiser."
             wrapMode: Text.Wrap; opacity: 0.7

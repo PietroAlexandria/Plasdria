@@ -37,11 +37,12 @@ Um widget para KDE Plasma 6 com chat integrado ao **Antigravity**, **Claude** e 
 | **GPU** | Nome da placa, uso (com histórico), frequência, temperatura e memória, conforme o driver informar: Intel (i915/xe), AMD (amdgpu) e NVIDIA (`nvidia-smi`). O anel de GPU do cartão Sistema usa a mesma leitura. |
 | **Atalhos** | Aplicativos instalados, sites e pastas com um toque. Só abre apps, endereços http/https/mailto, arquivos e pastas: nunca comandos de terminal. |
 | **Teste de velocidade** | Mede latência, jitter, download e upload com os servidores públicos da Cloudflare (`speed.cloudflare.com`), com velocidade ao vivo, barra de progresso e histórico dos últimos testes. **Só roda quando você toca em Iniciar** e usa de 50 a 300 MB de dados, conforme a conexão. Nada é enviado além dos dados de teste: nenhum IP ou identificação é guardado. |
+| **Cronômetro e pomodoro** | Cronômetro com voltas, timer (1 a 600 min) e pomodoro (foco, pausa curta e longa depois de 4 focos, com contagem do dia). O motor roda no widget e avisa com notificação do sistema mesmo com o cartão oculto; o estado sobrevive a reiniciar o Plasma. As durações do pomodoro são configuráveis. |
 | **Notícias** | Lista de manchetes do Google News Brasil com fonte e horário, tema configurável (Tecnologia, Esportes, Economia…). |
 
 **Layout editável.** Clique em **✎ Editar** ao lado do logo, no topo do widget (ou clique direito → **Editar layout**) e reorganize na mão: arraste os cartões pelo nome para outra posição ou coluna, oculte o que não usa (e traga de volta pela barra), puxe as divisões entre as colunas para mudar a largura e use **Restaurar padrão** se quiser recomeçar. O arranjo fica salvo. Nos tamanhos médio e estreito a edição usa setas ▲ ▼ para mudar a ordem dos cartões.
 
-Os cartões **Áudio e brilho, Bluetooth, Maiores consumidores, GPU, Atalhos e Teste de velocidade** começam ocultos no layout: clique em **✎ Editar** e toque em **＋ Nome** para colocá-los onde quiser (ou desligue-os de vez em Configurar → Cartões).
+Na primeira abertura (e depois de atualizações com cartões novos) o Plasdria mostra uma tela de **Novidades** para você escolher quais cartões quer. Eles começam ocultos no layout: clique em **✎ Editar** e toque em **＋ Nome** para colocá-los onde quiser (ou desligue-os de vez em Configurar → Cartões).
 
 <img src="docs/screenshot-cards.png" width="900" alt="Plasdria com os cartões de GPU, maiores consumidores, áudio e brilho, Bluetooth e atalhos" />
 
@@ -115,6 +116,10 @@ Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6
 | Teste de velocidade | HTTPS com `speed.cloudflare.com` (`/__down` e `/__up`), várias conexões em paralelo |
 | Clima e cidades | Open-Meteo (atual, por hora, 7 dias e geocodificação) |
 | Notícias | RSS do Google News Brasil |
+
+## Consumo
+
+Os cartões de áudio e brilho, Bluetooth, GPU e maiores consumidores só leem o sistema **enquanto estão na tela**, e tudo pausa quando o widget está recolhido em um painel. O áudio é atualizado por eventos do PipeWire/PulseAudio (`pactl subscribe`), sem consultas periódicas: com o cartão de áudio fechado são 0 chamadas ao `pactl` (eram 1 por segundo) e, com ele aberto, 1 conexão contínua.
 
 ## Dados e privacidade
 

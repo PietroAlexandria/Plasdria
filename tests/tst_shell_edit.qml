@@ -15,6 +15,7 @@ Item {
         property bool showSystem: true; property bool showConnections: true; property bool showCalendar: true
         property bool showMedia: true; property bool showNetwork: true; property bool showReminders: true; property bool showNews: true
         property string reminders: "[]"; property string userName: "Teste"
+        property int welcomeSeen: 1
     }
     Theme { id: theme }
     Backend.ClaudeClient { id: claude }
@@ -27,8 +28,10 @@ Item {
         t: theme; client: claude; dash: dash; media: media; net: network; cfg: cfg
         onSaveLayout: json => root.saved.push(json)
         onEditRequested: on => shell.editing = on
+        onWelcomeDone: root.welcomed++
     }
     property var saved: []
+    property int welcomed: 0
 
     function find(item, pred) {
         if (pred(item)) return item
@@ -43,10 +46,27 @@ Item {
 
         function init() { shell.editing = false; shell.resetLayout(); root.saved = []; wait(150) }
 
+        function test_boas_vindas_escolhe_cartoes_e_so_aparece_uma_vez() {
+            cfg.welcomeSeen = 1
+            verify(!shell.welcomeNeeded, "já visto: nada aparece")
+            cfg.welcomeSeen = 0
+            verify(shell.welcomeNeeded)
+            verify(!shell.welcomeVisible, "sem os controles do sistema (sys nulo) não há o que oferecer")
+            shell.welcomePick = {audio: true, speedtest: true, clock: false}
+            shell.applyWelcome()
+            const todas = shell.colIds.reduce((a, c) => a.concat(c), [])
+            verify(todas.indexOf("audio") >= 0 && todas.indexOf("speedtest") >= 0, "escolhidos entram no layout")
+            verify(todas.indexOf("clock") < 0 && todas.indexOf("gpu") < 0, "não escolhidos continuam ocultos")
+            verify(shell.hiddenIds.indexOf("clock") >= 0)
+            compare(root.welcomed, 1, "avisa o main.qml para gravar que já foi visto")
+            verify(shell.welcomeDismissed)
+            cfg.welcomeSeen = 1
+        }
+
         function test_modo_largo() { compare(shell.mode, "wide") }
 
         function test_cartoes_novos_comecam_ocultos() {
-            const novos = ["audio", "bluetooth", "gpu", "shortcuts", "speedtest", "top"]
+            const novos = ["audio", "bluetooth", "clock", "gpu", "shortcuts", "speedtest", "top"]
             compare(shell.hiddenIds.slice().sort(), novos)
             for (const id of novos) for (const col of shell.colIds) verify(col.indexOf(id) < 0, id + " fora das colunas")
             // Sem o sistema disponível (sys nulo) não há o que oferecer na barra de edição.

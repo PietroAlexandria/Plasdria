@@ -32,6 +32,9 @@ Item {
         property var topCpu: [{name: "firefox", cpu: 12.5, memory: 1.5e9, count: 8}, {name: "plasmashell", cpu: 2.1, memory: 4e8, count: 1}]
         property var topMemory: [{name: "firefox", cpu: 12.5, memory: 1.5e9, count: 8}]
         property int acquired: 0
+        property var topics: ({})
+        function acquire(t) { topics[t] = (topics[t] || 0) + 1 }
+        function release(t) { topics[t] = (topics[t] || 0) - 1 }
         function acquireTop() { acquired++ }
         function releaseTop() { acquired-- }
         function setAudioVolume(v) { calls.push("volume " + v.toFixed(2)); audioVolume = v }

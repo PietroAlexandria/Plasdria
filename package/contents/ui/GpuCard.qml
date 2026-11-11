@@ -7,6 +7,8 @@ Card {
     required property var sys
     required property var dash   // NVIDIA continua sendo lida pelo painel (nvidia-smi)
     title: "GPU"
+    Component.onCompleted: sys.acquire("gpu")
+    Component.onDestruction: sys.release("gpu")
     icon: "monitor-symbolic"
 
     readonly property real usage: sys.gpuUsage >= 0 ? sys.gpuUsage : dash.gpuUsage

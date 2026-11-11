@@ -128,8 +128,19 @@ PlasmoidItem {
     IcsFeed { id: calendarFeed; urls: root.effectiveCalendarUrls }
 
     Backend.MediaClient { id: mediaBackend }
-    Backend.SystemClient { id: sysBackend }
+    // Com o painel recolhido (modo ícone), as leituras do sistema param.
+    Backend.SystemClient { id: sysBackend; active: root.onDesktop || root.expanded }
     Backend.SpeedTestClient { id: speedBackend }
+    // Cronômetro, timer e pomodoro: o motor fica aqui para os alarmes tocarem mesmo com o cartão oculto.
+    ClockEngine {
+        id: clockEngine
+        focusMin: root.cfg.pomodoroFocus || 25
+        shortMin: root.cfg.pomodoroShort || 5
+        longMin: root.cfg.pomodoroLong || 15
+        onNotify: (title, body) => dashBackend.notify(title, body)
+        onPersist: json => root.cfg.clockState = json
+        Component.onCompleted: load(root.cfg.clockState || "")
+    }
     Backend.NetworkClient { id: netBackend }
 
     Plasmoid.contextualActions: [
@@ -161,7 +172,9 @@ PlasmoidItem {
         editing: root.layoutEditing
         sys: sysBackend
         speed: speedBackend
+        clock: clockEngine
         onSaveShortcuts: json => root.cfg.shortcuts = json
+        onWelcomeDone: root.cfg.welcomeSeen = 1
         events: calendarFeed.events; feedConfigured: calendarFeed.configured; feedStatus: calendarFeed.status
         onEditRequested: on => root.layoutEditing = on
         onSaveReminders: json => root.cfg.reminders = json
