@@ -19,6 +19,7 @@ Item {
     required property var net
     required property var cfg
     property bool editing: false
+    property var speed: null        // teste de velocidade (SpeedTestClient)
     property var sys: null          // controles do sistema (áudio, brilho, Bluetooth, processos, GPU, atalhos)
     signal saveShortcuts(string json)
     // Eventos das agendas iCal configuradas (veja IcsFeed.qml).
@@ -39,12 +40,12 @@ Item {
     }
 
     // ── Arranjo dos cartões ────────────────────────────────────────────────
-    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts"]
+    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest"]
     // Cartões novos começam ocultos: aparecem na barra de edição (＋) para você escolher onde ficam.
-    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts"]
+    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest"]
     readonly property var names: ({system: "Sistema", devices: "Dispositivos", network: "Rede", chat: "Chat · " + shell.client.providerName,
                                    media: "Música", calendar: "Calendário", reminders: "Lembretes", news: "Notícias",
-                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos"})
+                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos", speedtest: "Teste de velocidade"})
     readonly property var defaultCols: [["system", "devices", "network"], ["chat"], ["media", "calendar"], ["reminders", "news"]]
     readonly property var defaultWeights: [0.95, 1.35, 1, 1]
 
@@ -66,6 +67,7 @@ Item {
         case "top": return !!cfg.showTop && !!sys
         case "gpu": return !!cfg.showGpu && !!sys
         case "shortcuts": return !!cfg.showShortcuts && !!sys
+        case "speedtest": return !!cfg.showSpeedTest && !!speed
         default: return true
         }
     }
@@ -198,6 +200,7 @@ Item {
     Component { id: compBluetooth; BluetoothCard { t: shell.t; sys: shell.sys } }
     Component { id: compTop; TopCard { t: shell.t; sys: shell.sys } }
     Component { id: compGpu; GpuCard { t: shell.t; sys: shell.sys; dash: shell.dash } }
+    Component { id: compSpeedTest; SpeedTestCard { t: shell.t; speed: shell.speed } }
     Component { id: compShortcuts; ShortcutsCard { t: shell.t; sys: shell.sys; stored: shell.cfg.shortcuts || "[]"; onSave: json => shell.saveShortcuts(json) } }
     Component { id: compChat; ChatView { id: wideChatView; t: shell.t; client: shell.client; Component.onCompleted: shell.wideChat = wideChatView } }
     function factory(id) {
@@ -215,6 +218,7 @@ Item {
         case "top": return compTop
         case "gpu": return compGpu
         case "shortcuts": return compShortcuts
+        case "speedtest": return compSpeedTest
         }
         return null
     }

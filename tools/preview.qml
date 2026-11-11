@@ -20,8 +20,8 @@ Window {
     QtObject {
         id: cfg
         property string userName: "Pietro"
-        property bool showAudio: true; property bool showBluetooth: true; property bool showTop: true; property bool showGpu: true; property bool showShortcuts: true
-        property string layout: win.novos ? JSON.stringify({cols: [{w: 0.95, c: ["system", "gpu", "top"]}, {w: 1.2, c: ["chat"]}, {w: 1, c: ["media", "audio", "bluetooth", "shortcuts"]}, {w: 1, c: ["reminders", "calendar", "news"]}], hidden: ["devices", "network"]}) : ""
+        property bool showAudio: true; property bool showBluetooth: true; property bool showTop: true; property bool showGpu: true; property bool showShortcuts: true; property bool showSpeedTest: true
+        property string layout: win.novos ? JSON.stringify({cols: [{w: 0.95, c: ["system", "gpu", "top"]}, {w: 1.2, c: ["chat"]}, {w: 1, c: ["media", "audio", "speedtest", "shortcuts"]}, {w: 1, c: ["reminders", "calendar", "news"]}], hidden: ["devices", "network"]}) : ""
         property string shortcuts: "[]"
         property bool showWeather: true; property bool showSystem: true; property bool showConnections: true
         property bool showCalendar: true
@@ -33,6 +33,7 @@ Window {
     Backend.DashboardClient { id: dash; Component.onCompleted: { setLocation("Ourinhos", -22.97889, -49.87056); start() } }
     Backend.MediaClient { id: media }
     Backend.SystemClient { id: systemBackend }
+    Backend.SpeedTestClient { id: speedBackend }
     Backend.NetworkClient { id: realNet }
     // Com --sem-rede, o nome do Wi-Fi não aparece nas capturas públicas.
     QtObject {
@@ -46,7 +47,7 @@ Window {
     readonly property var netSource: win.hideNetwork ? maskedNet : realNet
     Shell { id: shell; editing: win.edit;
         feedConfigured: win.demo
-        events: win.demo ? win.demoEvents : []; anchors.fill: parent; anchors.margins: 10; t: theme; client: client; dash: dash; media: media; net: win.netSource; cfg: cfg; sys: systemBackend }
+        events: win.demo ? win.demoEvents : []; anchors.fill: parent; anchors.margins: 10; t: theme; client: client; dash: dash; media: media; net: win.netSource; cfg: cfg; sys: systemBackend; speed: speedBackend }
 
     // Eventos de exemplo (para as capturas do README).
     readonly property var demoEvents: {

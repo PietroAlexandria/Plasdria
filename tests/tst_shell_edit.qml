@@ -46,7 +46,7 @@ Item {
         function test_modo_largo() { compare(shell.mode, "wide") }
 
         function test_cartoes_novos_comecam_ocultos() {
-            const novos = ["audio", "bluetooth", "gpu", "shortcuts", "top"]
+            const novos = ["audio", "bluetooth", "gpu", "shortcuts", "speedtest", "top"]
             compare(shell.hiddenIds.slice().sort(), novos)
             for (const id of novos) for (const col of shell.colIds) verify(col.indexOf(id) < 0, id + " fora das colunas")
             // Sem o sistema disponível (sys nulo) não há o que oferecer na barra de edição.

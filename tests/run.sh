@@ -13,8 +13,17 @@ TZ=America/Sao_Paulo QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 QT_MESS
 grep -q PASSARAM "$task_test_dir/timeparse.out"
 # Edição do layout com mouse simulado e agenda iCal baixada de um servidor local (que se encerra sozinho).
 (timeout 120 python3 -m http.server 18765 --bind 127.0.0.1 --directory "$task_root/tests/data" >/dev/null 2>&1 &)
-sleep 0.8
-for task_qml in tst_shell_edit tst_icsfeed tst_cards; do
+(timeout 120 python3 "$task_root/tests/fake_speed_server.py" 18766 >/dev/null 2>&1 &)
+# Espera os dois servidores aceitarem conexões (até 5 s), em vez de torcer por um tempo fixo.
+for task_port in 18765 18766; do
+    for _ in $(seq 1 50); do
+        python3 -c "import socket; socket.create_connection(('127.0.0.1', $task_port), 0.2).close()" 2>/dev/null && break
+        sleep 0.1
+    done
+done
+# Os testes gravam o que quiserem aqui, nunca nos dados reais do usuário.
+export XDG_DATA_HOME="$task_test_dir/data"
+for task_qml in tst_shell_edit tst_icsfeed tst_cards tst_speedtest; do
     QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input "$task_root/tests/$task_qml.qml" 2>&1 \
         | tee "$task_test_dir/$task_qml.out" | grep -E "^(FAIL|PASS|Totals)|Loc:|Actual|Expected"
     grep -q " 0 failed" "$task_test_dir/$task_qml.out"

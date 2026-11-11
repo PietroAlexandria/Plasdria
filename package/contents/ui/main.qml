@@ -129,6 +129,7 @@ PlasmoidItem {
 
     Backend.MediaClient { id: mediaBackend }
     Backend.SystemClient { id: sysBackend }
+    Backend.SpeedTestClient { id: speedBackend }
     Backend.NetworkClient { id: netBackend }
 
     Plasmoid.contextualActions: [
@@ -159,6 +160,7 @@ PlasmoidItem {
         t: themeBackend; client: claudeBackend; dash: dashBackend; media: mediaBackend; net: netBackend; cfg: root.cfg
         editing: root.layoutEditing
         sys: sysBackend
+        speed: speedBackend
         onSaveShortcuts: json => root.cfg.shortcuts = json
         events: calendarFeed.events; feedConfigured: calendarFeed.configured; feedStatus: calendarFeed.status
         onEditRequested: on => root.layoutEditing = on

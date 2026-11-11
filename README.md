@@ -36,11 +36,12 @@ Um widget para KDE Plasma 6 com chat integrado ao **Antigravity**, **Claude** e 
 | **Maiores consumidores** | Os programas que mais usam CPU e memória, somando os processos de cada um (um navegador com 12 processos vira uma linha). Só mede enquanto o cartão está na tela. |
 | **GPU** | Nome da placa, uso (com histórico), frequência, temperatura e memória, conforme o driver informar: Intel (i915/xe), AMD (amdgpu) e NVIDIA (`nvidia-smi`). O anel de GPU do cartão Sistema usa a mesma leitura. |
 | **Atalhos** | Aplicativos instalados, sites e pastas com um toque. Só abre apps, endereços http/https/mailto, arquivos e pastas: nunca comandos de terminal. |
+| **Teste de velocidade** | Mede latência, jitter, download e upload com os servidores públicos da Cloudflare (`speed.cloudflare.com`), com velocidade ao vivo, barra de progresso e histórico dos últimos testes. **Só roda quando você toca em Iniciar** e usa de 50 a 300 MB de dados, conforme a conexão. Nada é enviado além dos dados de teste: nenhum IP ou identificação é guardado. |
 | **Notícias** | Lista de manchetes do Google News Brasil com fonte e horário, tema configurável (Tecnologia, Esportes, Economia…). |
 
 **Layout editável.** Clique em **✎ Editar** ao lado do logo, no topo do widget (ou clique direito → **Editar layout**) e reorganize na mão: arraste os cartões pelo nome para outra posição ou coluna, oculte o que não usa (e traga de volta pela barra), puxe as divisões entre as colunas para mudar a largura e use **Restaurar padrão** se quiser recomeçar. O arranjo fica salvo. Nos tamanhos médio e estreito a edição usa setas ▲ ▼ para mudar a ordem dos cartões.
 
-Os cartões **Áudio e brilho, Bluetooth, Maiores consumidores, GPU e Atalhos** começam ocultos no layout: clique em **✎ Editar** e toque em **＋ Nome** para colocá-los onde quiser (ou desligue-os de vez em Configurar → Cartões).
+Os cartões **Áudio e brilho, Bluetooth, Maiores consumidores, GPU, Atalhos e Teste de velocidade** começam ocultos no layout: clique em **✎ Editar** e toque em **＋ Nome** para colocá-los onde quiser (ou desligue-os de vez em Configurar → Cartões).
 
 <img src="docs/screenshot-cards.png" width="900" alt="Plasdria com os cartões de GPU, maiores consumidores, áudio e brilho, Bluetooth e atalhos" />
 
@@ -95,7 +96,7 @@ O projeto já vem configurado para o **VS Code** (`.vscode/`): abra a pasta e us
 | --- | --- |
 | Compilar | Gera o plugin nativo e o pacote `plasdria.plasmoid` |
 | Instalar no Plasma | Compila e instala/atualiza o widget |
-| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, a edição do layout e os cartões novos com mouse simulado |
+| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, a edição do layout e os cartões novos com mouse simulado, e o teste de velocidade contra um servidor local de mentira |
 | Prévia (capturas) | Renderiza o widget fora do Plasma e salva PNGs em `build/preview/` |
 
 Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6 tools/preview.qml -- <pasta> [--sem-rede]`.
@@ -111,6 +112,7 @@ Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6
 | Rede | `/proc/net/dev`, NetworkManager via D-Bus |
 | Sistema e baterias | `/proc`, `/sys` (hwmon, backlight, drm), UPower e BlueZ; `nvidia-smi` quando disponível |
 | Áudio, brilho e Bluetooth | `pactl` (PipeWire/PulseAudio), logind (brilho), BlueZ e rfkill |
+| Teste de velocidade | HTTPS com `speed.cloudflare.com` (`/__down` e `/__up`), várias conexões em paralelo |
 | Clima e cidades | Open-Meteo (atual, por hora, 7 dias e geocodificação) |
 | Notícias | RSS do Google News Brasil |
 
@@ -119,6 +121,7 @@ Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6
 - O widget usa o login de cada CLI (Antigravity, Claude Code, Codex, Gemini CLI); não há chaves de API no código. Só a **API Compatível** usa uma chave, que você informa nas configurações: o Plasdria a move para o **cofre de senhas do sistema** (KWallet/Secret Service) e esvazia o campo, pois o arquivo de configuração do Plasma pode ser lido por outros usuários do computador. Ela é enviada apenas ao endereço que você definir (prefira `https://`). Se o cofre estiver indisponível ou bloqueado, a chave continua na configuração.
 - As conversas ficam nos próprios CLIs (por exemplo `~/.claude/projects` e `~/.gemini/antigravity-cli`). O Plasdria guarda só o estado de recuperação em `~/.local/share/plasdria/chat-state.json`, privado do usuário.
 - **Perguntas, anexos e contexto enviados são processados pela IA escolhida** (e, ao trocar de IA no meio da conversa, o histórico na tela é reenviado como contexto para a nova). Com o Claude, o widget roda sem plugins, hooks ou servidores MCP do usuário e só libera ferramentas de leitura e busca (`Read`, `Glob`, `Grep`, `WebSearch`, `WebFetch`); nos demais, pedidos de permissão extra são recusados e o widget não usa opções que aprovam tudo automaticamente. O Ollama roda localmente.
+- O teste de velocidade só acessa `speed.cloudflare.com` quando você o inicia; o histórico dos resultados fica em `~/.local/share/plasdria/speedtest.json`.
 - A última música tocada fica em `~/.local/share/plasdria/media.json` e as capas em `~/.cache/plasdria/art` (no máximo 150).
 - A agenda é baixada dos links iCal que você configurar (somente leitura). Esse link costuma ser secreto: também vai para o cofre de senhas do sistema e é usado apenas para baixar a agenda. Sem internet, o Plasdria continua mostrando o que já baixou até fechar.
 - Os alarmes dos lembretes funcionam localmente, sem rede.

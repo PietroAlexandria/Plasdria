@@ -35,6 +35,7 @@
     <entry name="showTop" type="Bool"><default>true</default></entry>
     <entry name="showGpu" type="Bool"><default>true</default></entry>
     <entry name="showShortcuts" type="Bool"><default>true</default></entry>
+    <entry name="showSpeedTest" type="Bool"><default>true</default></entry>
   </group>
   <group name="Appearance">
     <entry name="accentColor" type="String"><default>#3daee9</default></entry>

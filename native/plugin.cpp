@@ -18,6 +18,7 @@
 #include "networkclient.h"
 #include "secretclient.h"
 #include "systemclient.h"
+#include "speedtestclient.h"
 
 class Messages : public QAbstractListModel {
     Q_OBJECT
@@ -1701,6 +1702,7 @@ public:
         qmlRegisterType<NetworkClient>(uri,1,0,"NetworkClient");
         qmlRegisterType<SecretClient>(uri,1,0,"SecretClient");
         qmlRegisterType<SystemClient>(uri,1,0,"SystemClient");
+        qmlRegisterType<SpeedTestClient>(uri,1,0,"SpeedTestClient");
     }
 };
 #include "plugin.moc"
