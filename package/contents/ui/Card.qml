@@ -29,7 +29,7 @@ Rectangle {
             visible: card.title !== ""
             Layout.fillWidth: true
             spacing: 7
-            Kirigami.Icon { visible: card.icon !== ""; source: card.icon; implicitWidth: 15; implicitHeight: 15; color: card.t.accent; isMask: true }
+            Kirigami.Icon { visible: card.icon !== ""; source: card.icon; implicitWidth: Math.round(15 * card.t.iconScale); implicitHeight: implicitWidth; color: card.t.accent; isMask: true }
             Text { text: card.title; color: card.t.muted; font.pixelSize: 11; font.weight: Font.DemiBold; font.letterSpacing: 0.8; font.capitalization: Font.AllUppercase; Layout.fillWidth: true; elide: Text.ElideRight }
             Row { id: actionRow; spacing: 2 }
         }

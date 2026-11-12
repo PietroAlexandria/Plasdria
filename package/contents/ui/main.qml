@@ -32,6 +32,8 @@ PlasmoidItem {
         accentBase: root.cfg.accentColor || "#3daee9"
         backgroundOpacity: (root.cfg.backgroundOpacity || 94) / 100
         animations: root.cfg.animations
+        density: root.cfg.density || "normal"
+        iconScale: Math.max(0.6, Math.min(1.6, (root.cfg.iconScale || 100) / 100))
         mode: root.cfg.themeMode || "dark"
         systemDark: Kirigami.Theme.backgroundColor.hslLightness < 0.5
     }
@@ -227,26 +229,38 @@ PlasmoidItem {
         }
     ]
 
-    fullRepresentation: Shell {
-        id: shell
-        t: themeBackend; client: claudeBackend; dash: dashBackend; media: mediaBackend; net: netBackend; cfg: root.cfg
-        editing: root.layoutEditing
-        sys: sysBackend
-        speed: speedBackend
-        clock: clockEngine
-        onSaveShortcuts: json => root.cfg.shortcuts = json
-        onWelcomeDone: root.cfg.welcomeSeen = 1
-        events: calendarFeed.events; feedConfigured: calendarFeed.configured; feedStatus: calendarFeed.status
-        onEditRequested: on => root.layoutEditing = on
-        onSaveReminders: json => root.cfg.reminders = json
-        onSaveLayout: json => root.cfg.layout = json
+    // Escala geral: o Shell é desenhado em um espaço menor (ou maior) e ampliado, então fontes, ícones e cartões
+    // mudam juntos e o layout responsivo se adapta ao espaço que sobra.
+    readonly property real uiScale: Math.max(0.5, Math.min(1.6, (cfg.uiScale || 100) / 100))
+    fullRepresentation: Item {
+        id: frame
         Layout.minimumWidth: 340
         Layout.minimumHeight: 480
         Layout.preferredWidth: 1280
         Layout.preferredHeight: 800
-        Connections {
-            target: root
-            function onExpandedChanged() { if (root.expanded) shell.focusChat() }
+        function focusChat() { shell.focusChat() }
+        function askAi(text) { shell.askAi(text) }
+        function revealCard(id) { shell.revealCard(id) }
+        clip: true
+        Shell {
+            id: shell
+            width: frame.width / root.uiScale; height: frame.height / root.uiScale
+            scale: root.uiScale; transformOrigin: Item.TopLeft
+            t: themeBackend; client: claudeBackend; dash: dashBackend; media: mediaBackend; net: netBackend; cfg: root.cfg
+            editing: root.layoutEditing
+            sys: sysBackend
+            speed: speedBackend
+            clock: clockEngine
+            onSaveShortcuts: json => root.cfg.shortcuts = json
+            onWelcomeDone: root.cfg.welcomeSeen = 1
+            events: calendarFeed.events; feedConfigured: calendarFeed.configured; feedStatus: calendarFeed.status
+            onEditRequested: on => root.layoutEditing = on
+            onSaveReminders: json => root.cfg.reminders = json
+            onSaveLayout: json => root.cfg.layout = json
+            Connections {
+                target: root
+                function onExpandedChanged() { if (root.expanded) shell.focusChat() }
+            }
         }
     }
 

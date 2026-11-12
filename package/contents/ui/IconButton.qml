@@ -14,14 +14,15 @@ Rectangle {
     property bool colored: false   // mostra o ícone com as cores originais (ex.: logo do Spotify)
     signal clicked()
 
-    width: size; height: size; radius: size / 2
+    readonly property real box: Math.round(size * t.iconScale)
+    width: box; height: box; radius: box / 2
     color: primary ? t.accent : active ? t.accentSoft : hover.hovered ? t.cardRaised : "transparent"
     opacity: enabled ? 1 : 0.35
     Behavior on color { ColorAnimation { duration: button.t.duration } }
     Kirigami.Icon {
         anchors.centerIn: parent
         source: button.icon
-        width: Math.round(button.size * 0.58); height: width
+        width: Math.round(button.box * 0.58); height: width
         isMask: !button.colored
         color: button.primary ? button.t.textOnAccent : button.active ? button.t.accent : button.t.ink
     }

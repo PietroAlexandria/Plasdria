@@ -6,6 +6,9 @@ QtObject {
     property color accentBase: "#3daee9"
     property real backgroundOpacity: 0.94
     property bool animations: true
+    // Tamanho: densidade dos cartões ("compact" | "normal" | "comfortable") e escala dos ícones (1 = padrão).
+    property string density: "normal"
+    property real iconScale: 1.0
     // "dark" | "light" | "system" (system segue o tema do Plasma, informado em systemDark).
     property string mode: "dark"
     property bool systemDark: true
@@ -37,8 +40,8 @@ QtObject {
     readonly property color accentLine: Qt.rgba(accent.r, accent.g, accent.b, 0.45)
 
     readonly property int radius: 14
-    readonly property int gap: 10
-    readonly property int pad: 12
+    readonly property int gap: density === "compact" ? 6 : density === "comfortable" ? 14 : 10
+    readonly property int pad: density === "compact" ? 8 : density === "comfortable" ? 16 : 12
     readonly property int duration: animations ? 180 : 0
 
     // Uso: verde até 70%, âmbar até 90%, vermelho acima.

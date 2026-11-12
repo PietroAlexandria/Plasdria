@@ -35,5 +35,20 @@ Item {
             theme.mode = "dark";  const a = lum(theme.accent)
             theme.mode = "light"; verify(lum(theme.accent) < a)
         }
+        function test_densidade_muda_o_espaco_dos_cartoes() {
+            theme.density = "normal"; const n = theme.pad, g = theme.gap
+            theme.density = "compact"; verify(theme.pad < n && theme.gap < g)
+            theme.density = "comfortable"; verify(theme.pad > n && theme.gap > g)
+            theme.density = "qualquer"; compare(theme.pad, n)
+            theme.density = "normal"
+        }
+        function test_escala_dos_icones_vale_para_botoes() {
+            const b = Qt.createQmlObject('import "../package/contents/ui"; IconButton { t: theme; icon: "go-up"; size: 30 }', this)
+            theme.iconScale = 1.0; compare(b.width, 30)
+            theme.iconScale = 0.7; compare(b.width, 21)
+            theme.iconScale = 1.3; compare(b.width, 39)
+            theme.iconScale = 1.0
+            b.destroy()
+        }
     }
 }

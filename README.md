@@ -59,7 +59,7 @@ Clique com o botão direito no widget → **Configurar Plasdria…**
 
 - **Geral** — seu nome para a saudação, links iCal da agenda (um por linha), cidade (busca por nome) ou detecção automática, IA padrão (Antigravity, Claude, Codex, Gemini CLI, Ollama ou API Compatível), modelo e esforço padrão, endpoint/chave para API compatível e tema das notícias.
 - **Cartões** — escolha quais cartões aparecem (a posição de cada um se edita no próprio widget).
-- **Aparência** — tema escuro, claro ou do sistema (acompanha o Plasma), cor de destaque, opacidade do fundo e animações.
+- **Aparência** — tema escuro, claro ou do sistema (acompanha o Plasma); **tamanho geral** de 50% a 160% (fontes, ícones e cartões juntos, com botões Pequeno/Normal/Grande; o layout se reorganiza sozinho para caber); **espaço nos cartões** (compacto, normal ou confortável); **tamanho dos ícones**; cor de destaque, opacidade do fundo e animações.
 - **Alertas do sistema** — notificação única quando a bateria fica baixa (e não está na tomada), o disco enche, a CPU esquenta ou a internet cai (e quando volta). Cada notificação traz botões: **Silenciar 1 h** e um atalho útil (abrir o widget, **Ver maiores consumidores** para CPU quente, **Testar a conexão** para internet fora). Limites configuráveis em Configurar → Geral, 0 desliga cada um; cada aviso só repete depois que o valor se recupera.
 - **Atalho global** — defina uma tecla em Configurar → Atalhos de teclado (clique direito no widget): ela abre o widget e leva o cursor ao campo do chat.
 - **Exportar conversa** — o botão de salvar no topo do chat grava a conversa em Markdown (`.md`).

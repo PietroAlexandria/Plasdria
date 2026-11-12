@@ -4,7 +4,7 @@ import "../package/contents/ui"
 import "../package/contents/ui/bridge" as Backend
 
 // Captura telas do widget fora do Plasma, com dados reais:
-//   qml6 tools/preview.qml -- <pasta-de-saída> ["pergunta ao Claude (usa Haiku)"] [--sem-rede] [--editar] [--novos] [--demo] [--claro]
+//   qml6 tools/preview.qml -- <pasta-de-saída> ["pergunta ao Claude (usa Haiku)"] [--sem-rede] [--editar] [--novos] [--demo] [--claro] [--escala=N] [--denso=compact|comfortable] [--icones=N]
 // --sem-rede oculta o cartão de rede (nome do Wi-Fi e IP) para capturas públicas.
 Window {
     id: win
@@ -18,6 +18,8 @@ Window {
     readonly property bool demo: args.indexOf("--demo") >= 0
     readonly property bool welcome: args.indexOf("--boasvindas") >= 0
     readonly property string tabName: { const a = args.filter(x => x.startsWith("--aba=")); return a.length ? a[0].slice(6) : "" }
+    function opt(name, fallback) { const a = args.filter(x => x.startsWith("--" + name + "=")); return a.length ? a[0].slice(name.length + 3) : fallback }
+    readonly property real uiScale: Number(opt("escala", "100")) / 100
     readonly property bool novos: args.indexOf("--novos") >= 0   // mostra os cartões novos (áudio, Bluetooth, consumidores, GPU, atalhos)
     QtObject {
         id: cfg
@@ -31,7 +33,7 @@ Window {
         property bool showMedia: true; property bool showNetwork: !win.hideNetwork; property bool showReminders: true; property bool showNews: true
         property string reminders: win.demo ? JSON.stringify([{id: "a", text: "Entregar trabalho de cálculo", done: false, due: Date.now() + 5 * 3600000, notified: false}, {id: "c", text: "Ligar para o João", done: false, due: Date.now() - 1800000, notified: true}, {id: "b", text: "Comprar café", done: true}]) : '[{"id":"a","text":"Entregar trabalho de cálculo","done":false},{"id":"b","text":"Comprar café","done":true}]'
     }
-    Theme { id: theme; mode: win.args.indexOf("--claro") >= 0 ? "light" : "dark" }
+    Theme { id: theme; mode: win.args.indexOf("--claro") >= 0 ? "light" : "dark"; density: win.opt("denso", "normal"); iconScale: Number(win.opt("icones", "100")) / 100 }
     Backend.ClaudeClient { id: client; Component.onCompleted: start() }
     Backend.DashboardClient { id: dash; Component.onCompleted: { setLocation("Ourinhos", -22.97889, -49.87056); start() } }
     Backend.MediaClient { id: media }
@@ -51,7 +53,7 @@ Window {
     readonly property var netSource: win.hideNetwork ? maskedNet : realNet
     Shell { id: shell; editing: win.edit;
         feedConfigured: win.demo
-        events: win.demo ? win.demoEvents : []; anchors.fill: parent; anchors.margins: 10; t: theme; client: client; dash: dash; media: media; net: win.netSource; cfg: cfg; sys: systemBackend; speed: speedBackend; clock: clockBackend }
+        events: win.demo ? win.demoEvents : []; x: 10; y: 10; width: (win.width - 20) / win.uiScale; height: (win.height - 20) / win.uiScale; scale: win.uiScale; transformOrigin: Item.TopLeft; t: theme; client: client; dash: dash; media: media; net: win.netSource; cfg: cfg; sys: systemBackend; speed: speedBackend; clock: clockBackend }
 
     // Eventos de exemplo (para as capturas do README).
     readonly property var demoEvents: {

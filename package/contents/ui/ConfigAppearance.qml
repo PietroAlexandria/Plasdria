@@ -10,6 +10,9 @@ KCM.SimpleKCM {
     property alias cfg_backgroundOpacity: opacitySlider.value
     property alias cfg_animations: animations.checked
     property string cfg_themeMode
+    property alias cfg_uiScale: scaleSlider.value
+    property string cfg_density
+    property alias cfg_iconScale: iconSlider.value
 
     readonly property var palette: [
         {color: "#3daee9", name: "Plasdria (azul)"}, {color: "#2bd9b0", name: "Plasdria (verde-água)"}, {color: "#8b7cff", name: "Violeta"},
@@ -30,6 +33,40 @@ KCM.SimpleKCM {
                     onClicked: page.cfg_themeMode = modelData.id
                 }
             }
+        }
+        RowLayout {
+            Kirigami.FormData.label: "Tamanho geral:"
+            spacing: Kirigami.Units.smallSpacing
+            QQC2.Slider { id: scaleSlider; from: 50; to: 160; stepSize: 5; Layout.preferredWidth: Kirigami.Units.gridUnit * 12 }
+            QQC2.Label { text: Math.round(scaleSlider.value) + "%"; Layout.preferredWidth: Kirigami.Units.gridUnit * 2.5 }
+            Repeater {
+                model: [{v: 80, n: "Pequeno"}, {v: 100, n: "Normal"}, {v: 125, n: "Grande"}]
+                delegate: QQC2.Button { required property var modelData; text: modelData.n; onClicked: scaleSlider.value = modelData.v }
+            }
+        }
+        QQC2.Label {
+            text: "Muda fontes, ícones e cartões juntos. Em tamanhos maiores o layout se reorganiza sozinho para caber."
+            wrapMode: Text.Wrap; opacity: 0.7
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 22
+        }
+        RowLayout {
+            Kirigami.FormData.label: "Espaço nos cartões:"
+            spacing: Kirigami.Units.smallSpacing
+            Repeater {
+                model: [{id: "compact", name: "Compacto"}, {id: "normal", name: "Normal"}, {id: "comfortable", name: "Confortável"}]
+                delegate: QQC2.RadioButton {
+                    required property var modelData
+                    text: modelData.name
+                    checked: page.cfg_density === modelData.id
+                    onClicked: page.cfg_density = modelData.id
+                }
+            }
+        }
+        RowLayout {
+            Kirigami.FormData.label: "Tamanho dos ícones:"
+            spacing: Kirigami.Units.smallSpacing
+            QQC2.Slider { id: iconSlider; from: 60; to: 160; stepSize: 5; Layout.preferredWidth: Kirigami.Units.gridUnit * 12 }
+            QQC2.Label { text: Math.round(iconSlider.value) + "%" }
         }
         RowLayout {
             Kirigami.FormData.label: "Cor de destaque:"
