@@ -38,6 +38,7 @@ Um widget para KDE Plasma 6 com chat integrado ao **Antigravity**, **Claude** e 
 | **Atalhos** | Aplicativos instalados, sites e pastas com um toque. Só abre apps, endereços http/https/mailto, arquivos e pastas: nunca comandos de terminal. |
 | **Teste de velocidade** | Mede latência, jitter, download e upload com os servidores públicos da Cloudflare (`speed.cloudflare.com`), com velocidade ao vivo, barra de progresso e histórico dos últimos testes. **Só roda quando você toca em Iniciar** e usa de 50 a 300 MB de dados, conforme a conexão. Nada é enviado além dos dados de teste: nenhum IP ou identificação é guardado. |
 | **Cronômetro e pomodoro** | Cronômetro com voltas, timer (1 a 600 min) e pomodoro (foco, pausa curta e longa depois de 4 focos, com contagem do dia). O motor roda no widget e avisa com notificação do sistema mesmo com o cartão oculto; o estado sobrevive a reiniciar o Plasma. As durações do pomodoro são configuráveis. |
+| **Resumo do dia** | Agenda de hoje, lembretes (atrasados, de hoje e sem data) e clima com dicas (guarda-chuva, calor, UV) num só cartão, montado no próprio widget, sem IA. O botão **Resumir com a IA** manda esse resumo ao chat para uma versão comentada. Uma notificação diária (a partir da hora escolhida, padrão 8 h) traz o resumo curto, com os botões **Ver resumo** e **Resumir com a IA**. |
 | **Notícias** | Lista de manchetes do Google News Brasil com fonte e horário, tema configurável (Tecnologia, Esportes, Economia…). |
 
 **Layout editável.** Clique em **✎ Editar** ao lado do logo, no topo do widget (ou clique direito → **Editar layout**) e reorganize na mão: arraste os cartões pelo nome para outra posição ou coluna, oculte o que não usa (e traga de volta pela barra), puxe as divisões entre as colunas para mudar a largura e use **Restaurar padrão** se quiser recomeçar. O arranjo fica salvo. Nos tamanhos médio e estreito a edição usa setas ▲ ▼ para mudar a ordem dos cartões.
@@ -59,7 +60,7 @@ Clique com o botão direito no widget → **Configurar Plasdria…**
 - **Geral** — seu nome para a saudação, links iCal da agenda (um por linha), cidade (busca por nome) ou detecção automática, IA padrão (Antigravity, Claude, Codex, Gemini CLI, Ollama ou API Compatível), modelo e esforço padrão, endpoint/chave para API compatível e tema das notícias.
 - **Cartões** — escolha quais cartões aparecem (a posição de cada um se edita no próprio widget).
 - **Aparência** — tema escuro, claro ou do sistema (acompanha o Plasma), cor de destaque, opacidade do fundo e animações.
-- **Alertas do sistema** — notificação única quando a bateria fica baixa (e não está na tomada), o disco enche, a CPU esquenta ou a internet cai (e quando volta). Limites configuráveis em Configurar → Geral, 0 desliga cada um; cada aviso só repete depois que o valor se recupera.
+- **Alertas do sistema** — notificação única quando a bateria fica baixa (e não está na tomada), o disco enche, a CPU esquenta ou a internet cai (e quando volta). Cada notificação traz botões: **Silenciar 1 h** e um atalho útil (abrir o widget, **Ver maiores consumidores** para CPU quente, **Testar a conexão** para internet fora). Limites configuráveis em Configurar → Geral, 0 desliga cada um; cada aviso só repete depois que o valor se recupera.
 - **Atalhos de teclado** — defina um atalho global para abrir o chat (página padrão do Plasma).
 
 ## Instalação
@@ -100,7 +101,7 @@ O projeto já vem configurado para o **VS Code** (`.vscode/`): abra a pasta e us
 | --- | --- |
 | Compilar | Gera o plugin nativo e o pacote `plasdria.plasmoid` |
 | Instalar no Plasma | Compila e instala/atualiza o widget |
-| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, a edição do layout, os alertas, as mensagens (regenerar/editar) e os cartões novos com mouse simulado, e o teste de velocidade contra um servidor local de mentira |
+| Testes | Compila e roda os testes: chat (Claude simulado), música (player simulado), prazos e agenda iCal, a edição do layout, os alertas, o resumo do dia, os botões das notificações (contra um servidor de notificações de mentira), as mensagens (regenerar/editar) e os cartões novos com mouse simulado, e o teste de velocidade contra um servidor local de mentira |
 | Prévia (capturas) | Renderiza o widget fora do Plasma e salva PNGs em `build/preview/` |
 
 Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6 tools/preview.qml -- <pasta> [--sem-rede]`.

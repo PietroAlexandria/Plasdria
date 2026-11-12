@@ -22,8 +22,8 @@ Window {
     QtObject {
         id: cfg
         property string userName: "Pietro"
-        property bool showAudio: true; property bool showBluetooth: true; property bool showTop: true; property bool showGpu: true; property bool showShortcuts: true; property bool showSpeedTest: true; property bool showClock: true
-        property string layout: win.novos ? JSON.stringify({cols: [{w: 0.95, c: ["system", "gpu", "top"]}, {w: 1.2, c: ["chat"]}, {w: 1, c: ["media", "clock", "speedtest", "shortcuts"]}, {w: 1, c: ["reminders", "calendar", "news"]}], hidden: ["devices", "network"]}) : ""
+        property bool showAudio: true; property bool showBluetooth: true; property bool showTop: true; property bool showGpu: true; property bool showShortcuts: true; property bool showSpeedTest: true; property bool showClock: true; property bool showDay: true
+        property string layout: win.novos ? JSON.stringify({cols: [{w: 0.95, c: ["system", "gpu", "top"]}, {w: 1.2, c: ["chat"]}, {w: 1, c: ["media", "clock", "speedtest", "shortcuts"]}, {w: 1, c: ["day", "reminders", "calendar", "news"]}], hidden: ["devices", "network"]}) : ""
         property string shortcuts: "[]"
         property int welcomeSeen: win.welcome ? 0 : 1
         property bool showWeather: true; property bool showSystem: true; property bool showConnections: true

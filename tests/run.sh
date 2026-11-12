@@ -23,20 +23,20 @@ for task_port in 18765 18766; do
 done
 # Os testes gravam o que quiserem aqui, nunca nos dados reais do usuário.
 export XDG_DATA_HOME="$task_test_dir/data"
-for task_qml in tst_shell_edit tst_icsfeed tst_cards tst_speedtest tst_clock tst_theme tst_alerts tst_bubble; do
+for task_qml in tst_shell_edit tst_icsfeed tst_cards tst_speedtest tst_clock tst_theme tst_alerts tst_bubble tst_day; do
     QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input "$task_root/tests/$task_qml.qml" 2>&1 \
         | tee "$task_test_dir/$task_qml.out" | grep -E "^(FAIL|PASS|Totals)|Loc:|Actual|Expected"
     grep -q " 0 failed" "$task_test_dir/$task_qml.out"
 done
-for task_suite in chathistory chatclient_test mediaclient_test; do
+for task_suite in chathistory chatclient_test mediaclient_test dashboardclient_test; do
     mkdir "$task_test_dir/$task_suite"
     cd "$task_test_dir/$task_suite"
     "$task_qmake" "$task_root/tests/$task_suite.pro"
     make -j2
     if [[ "$task_suite" == chathistory ]]; then
         ./chathistory_test
-    elif [[ "$task_suite" == mediaclient_test ]]; then
-        dbus-run-session -- ./mediaclient_test
+    elif [[ "$task_suite" == mediaclient_test || "$task_suite" == dashboardclient_test ]]; then
+        dbus-run-session -- "./$task_suite"
     else
         QT_QPA_PLATFORM=offscreen ./chatclient_test
     fi

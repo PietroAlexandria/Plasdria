@@ -255,3 +255,70 @@ function upcomingEvents(events, nowMs, leadMs, seen) {
     })
     return {notify: notify, seen: next}
 }
+
+// ── Resumo do dia ───────────────────────────────────────────────────────────
+
+function dayKey(ms) { var d = new Date(ms); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate() }
+
+// Hora de avisar o resumo: a partir de `hour` (0–23; -1 desliga), por até 4 h, uma vez por dia (`lastDay` guarda o dia).
+function summaryDue(nowMs, hour, lastDay) {
+    if (!(hour >= 0)) return false
+    var h = new Date(nowMs).getHours()
+    return h >= hour && h < hour + 4 && dayKey(nowMs) !== lastDay
+}
+
+// Monta o resumo do dia a partir do que o widget já sabe. Tudo em texto simples, sem IA:
+// o.events (da agenda), o.reminders (lista salva), o.weather ({place, temp, summary, high, low, rain, uv}).
+// Devolve {sections: [{kind, title, lines, empty}], brief, text}.
+function daySummary(o) {
+    var now = o.now, start = startOfDay(now), end = start + 86400000
+    var limit = 6
+
+    var evs = (o.events || []).filter(function (e) {
+        return e.end > start && e.start < end && (e.allDay || Math.max(e.end, e.start) >= now)
+    }).sort(function (a, b) { return (b.allDay ? 1 : 0) - (a.allDay ? 1 : 0) || a.start - b.start })
+    var agendaLines = evs.slice(0, limit).map(function (e) {
+        return (e.allDay ? "Dia todo" : clock(new Date(e.start))) + "  " + e.title + (e.location ? " · " + e.location : "")
+    })
+    if (evs.length > limit) agendaLines.push("e mais " + (evs.length - limit))
+
+    var pending = (o.reminders || []).filter(function (r) { return !r.done })
+    var overdue = pending.filter(function (r) { return r.due > 0 && r.due < now })
+    var today = pending.filter(function (r) { return r.due >= now && r.due < end })
+    var later = pending.length - overdue.length - today.length
+    var remLines = []
+    overdue.forEach(function (r) { remLines.push("Atrasado  " + r.text) })
+    today.forEach(function (r) { remLines.push(clock(new Date(r.due)) + "  " + r.text) })
+    var shownRem = remLines.slice(0, limit)
+    if (remLines.length > limit) shownRem.push("e mais " + (remLines.length - limit))
+    if (later > 0) shownRem.push(later + (later === 1 ? " lembrete sem data para hoje" : " lembretes sem data para hoje"))
+
+    var w = o.weather || {}
+    var wLines = []
+    if (w.temp) {
+        wLines.push((w.place ? w.place + " · " : "") + w.temp + (w.summary ? " · " + w.summary : ""))
+        var parts = []
+        if (w.high > -999 && w.low > -999) parts.push("máx " + w.high + "° · mín " + w.low + "°")
+        if (w.rain >= 0) parts.push("chuva " + w.rain + "%")
+        if (w.uv >= 6) parts.push("UV " + w.uv + " (alto)")
+        if (parts.length) wLines.push(parts.join(" · "))
+        if (w.rain >= 60) wLines.push("Leve guarda-chuva.")
+        else if (w.high >= 33) wLines.push("Dia quente: beba água.")
+    }
+
+    var sections = [
+        {kind: "agenda", title: "Agenda de hoje", lines: agendaLines, empty: "Nada marcado para hoje."},
+        {kind: "reminders", title: "Lembretes", lines: shownRem, empty: "Nenhum lembrete pendente."},
+        {kind: "weather", title: "Clima", lines: wLines, empty: "Clima indisponível."}
+    ]
+    var briefParts = []
+    briefParts.push(evs.length === 0 ? "sem eventos" : evs.length + (evs.length === 1 ? " evento" : " eventos"))
+    var urgent = overdue.length + today.length
+    briefParts.push(urgent === 0 ? "sem lembretes para hoje" : urgent + (urgent === 1 ? " lembrete" : " lembretes") + (overdue.length ? " (" + overdue.length + " atrasado" + (overdue.length === 1 ? "" : "s") + ")" : ""))
+    if (w.temp) briefParts.push(w.temp + (w.rain >= 40 ? ", chuva " + w.rain + "%" : ""))
+    var brief = briefParts.join(" · ")
+    var text = sections.map(function (s) {
+        return s.title + ":\n" + (s.lines.length ? s.lines.map(function (l) { return "- " + l }).join("\n") : "- " + s.empty)
+    }).join("\n\n")
+    return {sections: sections, brief: brief, text: text}
+}

@@ -76,14 +76,23 @@ public:
     Q_INVOKABLE void setNewsTopic(const QString &topic);
     // Notificação do sistema (D-Bus org.freedesktop.Notifications), usada pelos alarmes dos lembretes.
     Q_INVOKABLE void notify(const QString &title, const QString &body);
+    // Igual a notify, com botões. `actions` vem em pares id, rótulo (["open", "Abrir", "mute", "Silenciar"]);
+    // ao clicar, sai o sinal notificationAction(tag, id). Sem servidor de notificações que aceite botões, só aparece o aviso.
+    Q_INVOKABLE void notifyAction(const QString &title, const QString &body, const QString &tag, const QStringList &actions);
 
 signals:
+    void notificationAction(const QString &tag, const QString &action);
     void clockChanged();
     void weatherChanged();
     void newsChanged();
     void changed();
 
+private slots:
+    void onActionInvoked(uint id, const QString &action);
+    void onNotificationClosed(uint id, uint reason);
+
 private:
+    QHash<uint, QString> m_notificationTags;
     void requestBatteries();
     void updateClock();
     void updateMetrics();

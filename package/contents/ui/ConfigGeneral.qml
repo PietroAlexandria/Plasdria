@@ -19,6 +19,8 @@ KCM.SimpleKCM {
     property alias cfg_customModel: customModel.text
     property string cfg_newsTopic
     property alias cfg_calendarUrls: calendarUrls.text
+    property alias cfg_summaryEnabled: summaryOn.checked
+    property alias cfg_summaryHour: summaryHour.value
     property alias cfg_alertsEnabled: alertsOn.checked
     property alias cfg_alertBattery: alertBattery.value
     property alias cfg_alertDisk: alertDisk.value
@@ -254,6 +256,16 @@ KCM.SimpleKCM {
         QQC2.SpinBox { id: pomLong; Kirigami.FormData.label: "Pausa longa:"; from: 1; to: 120; textFromValue: v => v + " min"; valueFromText: t => parseInt(t) || 15 }
         QQC2.Label {
             text: "A pausa longa vem depois de 4 focos. Os avisos aparecem como notificações do sistema, mesmo com o painel fechado."
+            wrapMode: Text.Wrap; opacity: 0.7
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 22
+        }
+
+        Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: "Resumo do dia" }
+
+        QQC2.CheckBox { id: summaryOn; Kirigami.FormData.label: "Aviso diário:"; text: "Notificar um resumo do dia (agenda, lembretes e clima)" }
+        QQC2.SpinBox { id: summaryHour; enabled: summaryOn.checked; Kirigami.FormData.label: "A partir das:"; from: 0; to: 23; textFromValue: v => v + " h"; valueFromText: t => parseInt(t) || 0 }
+        QQC2.Label {
+            text: "Aparece uma vez por dia, na primeira checagem depois dessa hora (até 4 h depois; se o computador estava desligado, o aviso daquele dia é pulado). O cartão “Resumo do dia” mostra o mesmo conteúdo a qualquer momento."
             wrapMode: Text.Wrap; opacity: 0.7
             Layout.preferredWidth: Kirigami.Units.gridUnit * 22
         }

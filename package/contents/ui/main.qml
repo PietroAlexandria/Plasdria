@@ -117,6 +117,7 @@ PlasmoidItem {
         for (const text of result.notify) dashBackend.notify("Lembrete", text)
         if (result.changed) cfg.reminders = JSON.stringify(result.list)
         checkEvents()
+        checkSummary()
     }
     // Eventos da agenda: avisa alguns minutos antes (0 desliga). O que já foi avisado fica só em memória.
     property var notifiedEvents: ({})
@@ -127,6 +128,26 @@ PlasmoidItem {
         for (const e of result.notify)
             dashBackend.notify(e.title, "Começa em " + e.minutes + " min (" + new Date(e.start).toLocaleTimeString(Qt.locale(), "HH:mm") + ")" + (e.location ? " · " + e.location : ""))
     }
+
+    // Resumo do dia: uma notificação por dia, na hora escolhida (dentro de uma janela de 4 h).
+    function remindersList() { try { const l = JSON.parse(cfg.reminders || "[]"); return Array.isArray(l) ? l : [] } catch (e) { return [] } }
+    function currentSummary() {
+        const w = dashBackend.weatherDetails || ({})
+        return TP.daySummary({now: Date.now(), events: calendarFeed.events, reminders: remindersList(),
+            weather: {place: dashBackend.weatherLocation, temp: dashBackend.weatherTemperature, summary: (dashBackend.weatherSummary || "").split(" · ")[0],
+                      high: w.high === undefined ? -1000 : w.high, low: w.low === undefined ? -1000 : w.low,
+                      rain: w.rainChance === undefined ? -1 : w.rainChance, uv: w.uv === undefined ? -1 : w.uv}})
+    }
+    function checkSummary() {
+        const hour = (cfg.summaryEnabled === false) ? -1 : (cfg.summaryHour === undefined ? 8 : cfg.summaryHour)
+        const now = Date.now()
+        if (!TP.summaryDue(now, hour, cfg.summaryLastDay || "")) return
+        cfg.summaryLastDay = TP.dayKey(now)
+        const s = currentSummary()
+        dashBackend.notifyAction((dashBackend.greeting || "Olá") + (cfg.userName ? ", " + cfg.userName : "") + " · Resumo do dia", s.brief, "summary",
+                                 ["open", "Ver resumo", "ai", "Resumir com a IA"])
+    }
+    function askAiSummary() { const sh = root.fullRepresentationItem; if (sh && sh.askAi) sh.askAi(currentSummary().text) }
 
     IcsFeed { id: calendarFeed; urls: root.effectiveCalendarUrls }
 
@@ -158,7 +179,23 @@ PlasmoidItem {
         disk: dashBackend.storageUsage
         temp: Number(dashBackend.systemDetails.cpuTemp) || -1
         online: netBackend.online
-        onNotify: (title, body) => dashBackend.notify(title, body)
+        onNotify: (title, body, key) => {
+            // Cada alerta leva botões: abrir o cartão que ajuda e silenciar por 1 h.
+            const open = {low: ["open", "Abrir o Plasdria"], disk: ["open", "Abrir o Plasdria"], temp: ["top", "Ver maiores consumidores"], net: ["speedtest", "Testar a conexão"]}[key]
+            if (open) dashBackend.notifyAction(title, body, "alert:" + key, open.concat(["mute", "Silenciar 1 h"]))
+            else dashBackend.notify(title, body)
+        }
+    }
+    // Botões das notificações: "mute" silencia o alerta; "open" abre o widget; um id de cartão também o mostra.
+    Connections {
+        target: dashBackend
+        function onNotificationAction(tag, action) {
+            if (tag.indexOf("alert:") === 0 && action === "mute") { alertEngine.mute(tag.slice(6), 3600000); return }
+            if (action === "ai" && tag === "summary") { root.expanded = true; Qt.callLater(root.askAiSummary); return }
+            root.expanded = true
+            if (action !== "open") Qt.callLater(() => { const sh = root.fullRepresentationItem; if (sh && sh.revealCard) sh.revealCard(action) })
+            if (tag === "summary") Qt.callLater(() => { const sh = root.fullRepresentationItem; if (sh && sh.revealCard) sh.revealCard("day") })
+        }
     }
 
     Plasmoid.contextualActions: [

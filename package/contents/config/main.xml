@@ -50,6 +50,10 @@
     <entry name="shortcuts" type="String"><default>[]</default></entry>
     <entry name="welcomeSeen" type="Int"><default>0</default></entry>
     <entry name="clockState" type="String"><default></default></entry>
+    <entry name="showDay" type="Bool"><default>true</default></entry>
+    <entry name="summaryEnabled" type="Bool"><default>true</default></entry>
+    <entry name="summaryHour" type="Int"><default>8</default></entry>
+    <entry name="summaryLastDay" type="String"><default></default></entry>
     <entry name="alertsEnabled" type="Bool"><default>true</default></entry>
     <entry name="alertBattery" type="Int"><default>20</default></entry>
     <entry name="alertDisk" type="Int"><default>90</default></entry>

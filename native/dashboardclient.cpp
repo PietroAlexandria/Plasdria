@@ -62,6 +62,12 @@ QString portugueseDate(const QDate &date) {
 DashboardClient::DashboardClient(QObject *parent) : QObject(parent) {
     qDBusRegisterMetaType<DBusInterfaces>();
     qDBusRegisterMetaType<DBusObjects>();
+    {
+        const QString service = QStringLiteral("org.freedesktop.Notifications"), path = QStringLiteral("/org/freedesktop/Notifications");
+        auto bus = QDBusConnection::sessionBus();
+        bus.connect(service, path, service, QStringLiteral("ActionInvoked"), this, SLOT(onActionInvoked(uint,QString)));
+        bus.connect(service, path, service, QStringLiteral("NotificationClosed"), this, SLOT(onNotificationClosed(uint,uint)));
+    }
     m_batteryTimer.setInterval(5000);
     connect(&m_batteryTimer, &QTimer::timeout, this, &DashboardClient::requestBatteries);
     connect(&m_batteryTimer, &QTimer::timeout, this, &DashboardClient::requestBatteryDetails);
@@ -125,6 +131,29 @@ void DashboardClient::notify(const QString &title, const QString &body) {
             << QStringList{} << QVariantMap{{"urgency", QVariant::fromValue<uchar>(1)}} << int(15000);
     QDBusConnection::sessionBus().asyncCall(message, 3000);
 }
+
+void DashboardClient::notifyAction(const QString &title, const QString &body, const QString &tag, const QStringList &actions) {
+    auto message = QDBusMessage::createMethodCall("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                                                  "org.freedesktop.Notifications", "Notify");
+    message << QStringLiteral("Plasdria") << uint(0) << QStringLiteral("plasdria") << title << body
+            << actions << QVariantMap{{"urgency", QVariant::fromValue<uchar>(1)}} << int(30000);
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 3000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, tag, watcher] {
+        const QDBusPendingReply<uint> reply = *watcher;
+        if (reply.isValid()) {
+            if (m_notificationTags.size() > 50) m_notificationTags.clear();   // avisos antigos nunca fecharam: esquece
+            m_notificationTags.insert(reply.value(), tag);
+        }
+        watcher->deleteLater();
+    });
+}
+
+void DashboardClient::onActionInvoked(uint id, const QString &action) {
+    const auto it = m_notificationTags.constFind(id);
+    if (it != m_notificationTags.constEnd()) emit notificationAction(it.value(), action);
+}
+
+void DashboardClient::onNotificationClosed(uint id, uint) { m_notificationTags.remove(id); }
 
 void DashboardClient::refresh() {
     requestLocation();

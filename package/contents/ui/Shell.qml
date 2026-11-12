@@ -31,6 +31,14 @@ Item {
     signal saveReminders(string json)
     signal saveLayout(string json)
     signal editRequested(bool on)
+    // Pede à IA do chat um resumo comentado do dia e leva o foco para o chat.
+    function askAi(text) {
+        if (!client.ready || client.busy) return
+        client.send("Com base nestes dados do meu dia, escreva um resumo curto e amigável, destacando o que merece mais atenção e sugerindo uma ordem para as tarefas.\n\n" + text)
+        focusChat()
+    }
+    // Mostra um cartão que estava oculto (usado pelos botões das notificações).
+    function revealCard(id) { if (hiddenIds.indexOf(id) >= 0 && cardOn(id)) showCard(id) }
 
     // Largo só quando cabe confortável: poucas alturas viram o layout médio, que rola.
     readonly property string mode: width >= 1100 && height >= 700 ? "wide" : width >= 720 ? "medium" : "narrow"
@@ -42,12 +50,12 @@ Item {
     }
 
     // ── Arranjo dos cartões ────────────────────────────────────────────────
-    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock"]
+    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock", "day"]
     // Cartões novos começam ocultos: aparecem na barra de edição (＋) para você escolher onde ficam.
-    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock"]
+    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock", "day"]
     readonly property var names: ({system: "Sistema", devices: "Dispositivos", network: "Rede", chat: "Chat · " + shell.client.providerName,
                                    media: "Música", calendar: "Calendário", reminders: "Lembretes", news: "Notícias",
-                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos", speedtest: "Teste de velocidade", clock: "Cronômetro e pomodoro"})
+                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos", speedtest: "Teste de velocidade", clock: "Cronômetro e pomodoro", day: "Resumo do dia"})
     readonly property var defaultCols: [["system", "devices", "network"], ["chat"], ["media", "calendar"], ["reminders", "news"]]
     readonly property var defaultWeights: [0.95, 1.35, 1, 1]
 
@@ -71,6 +79,7 @@ Item {
         case "shortcuts": return !!cfg.showShortcuts && !!sys
         case "speedtest": return !!cfg.showSpeedTest && !!speed
         case "clock": return !!cfg.showClock && !!clock
+        case "day": return cfg.showDay !== false
         default: return true
         }
     }
@@ -156,10 +165,11 @@ Item {
         {id: "top", icon: "office-chart-bar-percentage-symbolic", text: "Quais programas mais usam CPU e memória"},
         {id: "shortcuts", icon: "emblem-favorite-symbolic", text: "Apps, sites e pastas favoritos, com um toque"},
         {id: "speedtest", icon: "speedometer-symbolic", text: "Mede latência, download e upload da conexão"},
+        {id: "day", icon: "view-calendar-day", text: "Agenda, lembretes e clima do dia num só lugar"},
         {id: "clock", icon: "chronometer", text: "Voltas, contagem regressiva e ciclos de foco com aviso"},
         {id: "gpu", icon: "monitor-symbolic", text: "Uso, frequência e memória da placa de vídeo"},
         {id: "bluetooth", icon: "preferences-system-bluetooth-symbolic", text: "Dispositivos Bluetooth e bateria"}]
-    property var welcomePick: ({audio: true, top: true, shortcuts: true, clock: true})
+    property var welcomePick: ({audio: true, top: true, shortcuts: true, clock: true, day: true})
     function applyWelcome() {
         for (const id of newIds) if (welcomePick[id]) showCard(id)
         finishWelcome()
@@ -282,6 +292,7 @@ Item {
     Component { id: compBluetooth; BluetoothCard { t: shell.t; sys: shell.sys } }
     Component { id: compTop; TopCard { t: shell.t; sys: shell.sys } }
     Component { id: compGpu; GpuCard { t: shell.t; sys: shell.sys; dash: shell.dash } }
+    Component { id: compDay; DayCard { t: shell.t; dash: shell.dash; events: shell.events; stored: shell.cfg.reminders || "[]"; aiReady: shell.client.ready && !shell.client.busy; onAskAi: text => shell.askAi(text) } }
     Component { id: compClock; ClockCard { t: shell.t; clock: shell.clock } }
     Component { id: compSpeedTest; SpeedTestCard { t: shell.t; speed: shell.speed } }
     Component { id: compShortcuts; ShortcutsCard { t: shell.t; sys: shell.sys; stored: shell.cfg.shortcuts || "[]"; onSave: json => shell.saveShortcuts(json) } }
@@ -303,6 +314,7 @@ Item {
         case "shortcuts": return compShortcuts
         case "speedtest": return compSpeedTest
         case "clock": return compClock
+        case "day": return compDay
         }
         return null
     }

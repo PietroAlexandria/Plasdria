@@ -66,11 +66,11 @@ Item {
         function test_modo_largo() { compare(shell.mode, "wide") }
 
         function test_cartoes_novos_comecam_ocultos() {
-            const novos = ["audio", "bluetooth", "clock", "gpu", "shortcuts", "speedtest", "top"]
+            const novos = ["audio", "bluetooth", "clock", "day", "gpu", "shortcuts", "speedtest", "top"]
             compare(shell.hiddenIds.slice().sort(), novos)
             for (const id of novos) for (const col of shell.colIds) verify(col.indexOf(id) < 0, id + " fora das colunas")
-            // Sem o sistema disponível (sys nulo) não há o que oferecer na barra de edição.
-            compare(shell.hiddenEnabled.length, 0)
+            // Sem o sistema disponível (sys nulo) só sobra o que não depende dele: o resumo do dia.
+            compare(shell.hiddenEnabled, ["day"])
             // Um layout salvo por versão anterior (sem os ids novos) também os deixa ocultos.
             shell.applyLayout(JSON.stringify({cols: [{w: 1, c: ["system"]}, {w: 1, c: ["chat"]}], hidden: ["news"]}))
             verify(shell.hiddenIds.indexOf("audio") >= 0 && shell.hiddenIds.indexOf("shortcuts") >= 0)
@@ -111,7 +111,7 @@ Item {
             const mine = id => ["news", "reminders"].indexOf(id) >= 0
             compare(shell.hiddenIds.filter(mine).sort(), ["news", "reminders"])
             compare(shell.colIds[3], [])
-            compare(shell.hiddenEnabled.length, 2)
+            compare(shell.hiddenEnabled.filter(mine).length, 2)
             shell.showCard("news"); wait(100)
             compare(shell.hiddenIds.filter(mine), ["reminders"])
         }

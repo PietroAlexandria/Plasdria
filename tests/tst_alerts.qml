@@ -7,11 +7,12 @@ Item {
     id: root
     width: 100; height: 100
     property var notices: []
+    property var keys: []
     readonly property real t0: new Date(2026, 5, 10, 8, 0, 0).getTime()
     AlertEngine {
         id: a
         fakeNow: root.t0
-        onNotify: (title, body) => root.notices.push(title)
+        onNotify: (title, body, key) => { root.notices.push(title); root.keys.push(key) }
     }
     TestCase {
         name: "Alertas"
@@ -20,7 +21,8 @@ Item {
             a.enabled = true; a.batteryLow = 20; a.diskFull = 90; a.tempHigh = 85; a.offlineSeconds = 45
             a.battery = 80; a.charging = false; a.disk = 40; a.temp = 50; a.online = true
             a.fired = ({}); a.offlineSince = 0; a.fakeNow = root.t0
-            root.notices = []
+            a.mutedUntil = ({})
+            root.notices = []; root.keys = []
         }
         function test_nada_acontece_com_tudo_normal() { a.check(); compare(root.notices.length, 0) }
         function test_bateria_baixa_avisa_uma_vez_e_rearma() {
@@ -72,6 +74,24 @@ Item {
             compare(root.notices.length, 0)
             a.batteryLow = 20; a.enabled = false; a.check()
             compare(root.notices.length, 0)
+        }
+        function test_cada_aviso_leva_a_sua_chave() {
+            a.battery = 10; a.disk = 95; a.check()
+            compare(root.keys, ["low", "disk"])
+        }
+        function test_silenciar_segura_o_aviso_por_um_tempo() {
+            a.mute("disk", 3600000)
+            a.disk = 95; a.check()
+            compare(root.notices.length, 0, "silenciado")
+            a.fakeNow += 30 * 60000; a.check()
+            compare(root.notices.length, 0, "ainda dentro de 1 h")
+            a.fakeNow += 31 * 60000; a.check()
+            compare(root.notices, ["Disco quase cheio"], "passou 1 h e o problema continua")
+        }
+        function test_silenciar_um_alerta_nao_cala_os_outros() {
+            a.mute("disk", 3600000)
+            a.disk = 95; a.temp = 95; a.check()
+            compare(root.keys, ["temp"])
         }
     }
 }

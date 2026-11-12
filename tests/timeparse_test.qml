@@ -75,6 +75,40 @@ Item {
         check("evento: avisa o seguinte quando chega a hora", TP.upcomingEvents(agenda, now + 25 * 60000, 10 * 60000, up.seen).notify.map(e => e.title), ["Em 30 min"])
         check("evento: lead 0 desliga", TP.upcomingEvents(agenda, now, 0, {}).notify, [])
 
+        // Resumo do dia: quarta 11/11 10:00
+        const day = TP.daySummary({
+            now: now, name: "Pietro",
+            events: [{title: "Treino", start: at(2026, 11, 11, 7, 0), end: at(2026, 11, 11, 8, 0), allDay: false, location: ""},
+                     {title: "Aula de Cálculo", start: at(2026, 11, 11, 19, 0), end: at(2026, 11, 11, 21, 0), allDay: false, location: "Sala 12"},
+                     {title: "Feriado", start: at(2026, 11, 11), end: at(2026, 11, 12), allDay: true, location: ""},
+                     {title: "Amanhã", start: at(2026, 11, 12, 9, 0), end: at(2026, 11, 12, 10, 0), allDay: false, location: ""}],
+            reminders: [{text: "Entregar trabalho", due: at(2026, 11, 11, 9, 0), done: false},
+                        {text: "Ligar para o João", due: at(2026, 11, 11, 15, 30), done: false},
+                        {text: "Já feito", due: at(2026, 11, 11, 9, 30), done: true},
+                        {text: "Comprar café", due: 0, done: false},
+                        {text: "Mês que vem", due: at(2026, 12, 5, 9, 0), done: false}],
+            weather: {place: "Ourinhos", temp: "22°C", summary: "Encoberto", high: 29, low: 18, rain: 84, uv: 6}})
+        check("resumo: agenda só do que ainda vale hoje", day.sections[0].lines, ["Dia todo  Feriado", "19:00  Aula de Cálculo · Sala 12"])
+        check("resumo: lembretes (atrasado, hoje e sem data)", day.sections[1].lines,
+              ["Atrasado  Entregar trabalho", "15:30  Ligar para o João", "2 lembretes sem data para hoje"])
+        check("resumo: clima com dica de guarda-chuva", day.sections[2].lines,
+              ["Ourinhos · 22°C · Encoberto", "máx 29° · mín 18° · chuva 84% · UV 6 (alto)", "Leve guarda-chuva."])
+        check("resumo: versão curta", day.brief, "2 eventos · 2 lembretes (1 atrasado) · 22°C, chuva 84%")
+        check("resumo: texto para a IA começa pela agenda", day.text.indexOf("Agenda de hoje:\n- Dia todo  Feriado") === 0, true)
+        const vazio = TP.daySummary({now: now, events: [], reminders: [], weather: {}})
+        check("resumo: dia vazio", [vazio.sections.map(s => s.lines.length), vazio.brief], [[0, 0, 0], "sem eventos · sem lembretes para hoje"])
+        check("resumo: muitos eventos viram 'e mais N'", TP.daySummary({now: now, reminders: [], weather: {},
+              events: Array.from({length: 9}, (_, i) => ({title: "E" + i, start: at(2026, 11, 11, 11 + (i % 8), 0), end: at(2026, 11, 11, 12, 0), allDay: false, location: ""}))}).sections[0].lines.slice(-1), ["e mais 3"])
+
+        // Quando avisar o resumo
+        check("aviso do resumo: antes da hora", TP.summaryDue(at(2026, 11, 11, 7, 59), 8, ""), false)
+        check("aviso do resumo: na hora", TP.summaryDue(at(2026, 11, 11, 8, 0), 8, ""), true)
+        check("aviso do resumo: dentro da janela de 4 h", TP.summaryDue(at(2026, 11, 11, 11, 59), 8, ""), true)
+        check("aviso do resumo: depois da janela não avisa atrasado", TP.summaryDue(at(2026, 11, 11, 12, 0), 8, ""), false)
+        check("aviso do resumo: uma vez por dia", TP.summaryDue(at(2026, 11, 11, 9, 0), 8, TP.dayKey(at(2026, 11, 11, 8, 0))), false)
+        check("aviso do resumo: dia seguinte avisa de novo", TP.summaryDue(at(2026, 11, 12, 8, 5), 8, TP.dayKey(at(2026, 11, 11, 8, 0))), true)
+        check("aviso do resumo: desligado", TP.summaryDue(at(2026, 11, 11, 9, 0), -1, ""), false)
+
         console.log(failures === 0 ? "TODOS OS TESTES PASSARAM" : failures + " FALHA(S)")
         Qt.exit(failures === 0 ? 0 : 1)
     }
