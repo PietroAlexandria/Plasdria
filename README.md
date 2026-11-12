@@ -61,7 +61,7 @@ Clique com o botão direito no widget → **Configurar Plasdria…**
 - **Cartões** — escolha quais cartões aparecem (a posição de cada um se edita no próprio widget).
 - **Aparência** — tema escuro, claro ou do sistema (acompanha o Plasma), cor de destaque, opacidade do fundo e animações.
 - **Alertas do sistema** — notificação única quando a bateria fica baixa (e não está na tomada), o disco enche, a CPU esquenta ou a internet cai (e quando volta). Cada notificação traz botões: **Silenciar 1 h** e um atalho útil (abrir o widget, **Ver maiores consumidores** para CPU quente, **Testar a conexão** para internet fora). Limites configuráveis em Configurar → Geral, 0 desliga cada um; cada aviso só repete depois que o valor se recupera.
-- **Atalho global** — `Meta+Alt+P` abre o widget e leva o cursor ao campo do chat (troque em Configurar → Atalhos de teclado).
+- **Atalho global** — defina uma tecla em Configurar → Atalhos de teclado (clique direito no widget): ela abre o widget e leva o cursor ao campo do chat.
 - **Exportar conversa** — o botão de salvar no topo do chat grava a conversa em Markdown (`.md`).
 
 ## Instalação

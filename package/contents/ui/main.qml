@@ -15,8 +15,7 @@ PlasmoidItem {
     switchWidth: 340; switchHeight: 420
     property bool layoutEditing: false
 
-    // Atalho global (Configurar → Atalhos de teclado): abre o widget e leva o cursor ao campo do chat.
-    Plasmoid.globalShortcut: "Meta+Alt+P"
+    // Atalho global (definido em Configurar → Atalhos de teclado; o QML não aceita um padrão): abre o widget e leva o cursor ao campo do chat.
     Plasmoid.onActivated: {
         root.expanded = true
         Qt.callLater(() => { const sh = root.fullRepresentationItem; if (sh && sh.focusChat) sh.focusChat() })
