@@ -15,6 +15,13 @@ PlasmoidItem {
     switchWidth: 340; switchHeight: 420
     property bool layoutEditing: false
 
+    // Atalho global (Configurar → Atalhos de teclado): abre o widget e leva o cursor ao campo do chat.
+    Plasmoid.globalShortcut: "Meta+Alt+P"
+    Plasmoid.onActivated: {
+        root.expanded = true
+        Qt.callLater(() => { const sh = root.fullRepresentationItem; if (sh && sh.focusChat) sh.focusChat() })
+    }
+
     toolTipMainText: "Plasdria"
     toolTipSubText: {
         const used = claudeBackend.fiveHourUsed

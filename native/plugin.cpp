@@ -597,6 +597,28 @@ public:
         saveChatState(); emit attachmentsChanged();
         return send(question);
     }
+    // A conversa na tela em Markdown: um título, depois cada mensagem sob o nome de quem falou.
+    Q_INVOKABLE QString conversationMarkdown() const {
+        QString out = "# Conversa com " + providerName() + "\n\n_Exportada pelo Plasdria em " + QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm") + "_\n";
+        for (const auto &v : m_messages.rows) {
+            const auto row = v.toObject();
+            const bool mine = row["speaker"].toString() == "user";
+            const QString name = mine ? QStringLiteral("Você") : (row["assistantName"].toString().isEmpty() ? providerName() : row["assistantName"].toString());
+            out += "\n## " + name + "\n\n" + row["body"].toString().trimmed() + "\n";
+            QStringList files;
+            for (const auto &f : row["files"].toArray()) files << f.toObject()["name"].toString();
+            if (!files.isEmpty()) out += "\n_Anexos: " + files.join(", ") + "_\n";
+        }
+        return out;
+    }
+    // Grava a conversa em um arquivo .md (o seletor de arquivos do chat chama isto). Falso sem mensagens ou se não der para gravar.
+    Q_INVOKABLE bool exportConversation(const QUrl &url) {
+        if (m_messages.rowCount() == 0 || !url.isLocalFile()) return false;
+        QSaveFile file(url.toLocalFile());
+        if (!file.open(QIODevice::WriteOnly)) return false;
+        file.write(conversationMarkdown().toUtf8());
+        return file.commit();
+    }
     Q_INVOKABLE void stop() {
         if(!m_busy) return;
         m_cancelRequested=true;

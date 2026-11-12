@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic as B
 import QtQuick.Dialogs
+import QtCore
 import org.kde.kirigami as Kirigami
 
 // Chat de IA (Antigravity, Claude, Codex, Gemini, Ollama, API Compatível): cabeçalho com seletor de IA, modelo e cotas, mensagens, anexos e campo de envio.
@@ -120,6 +121,7 @@ Rectangle {
                 }
             }
             IconButton { t: chat.t; icon: "view-history"; tip: "Conversas anteriores"; active: history.opened; onClicked: history.opened ? history.close() : history.open() }
+            IconButton { t: chat.t; icon: "document-save"; tip: "Exportar a conversa (Markdown)"; enabled: chat.client.messages.rowCount() > 0; onClicked: exportDialog.open() }
             IconButton { t: chat.t; icon: "list-add"; tip: "Nova conversa"; enabled: !chat.client.busy; onClicked: { chat.client.newChat(); input.forceActiveFocus() } }
         }
 
@@ -337,6 +339,16 @@ Rectangle {
         id: dropArea
         anchors.fill: parent
         onDropped: drop => { for (const url of drop.urls) chat.client.addAttachment(url) }
+    }
+    FileDialog {
+        id: exportDialog
+        title: "Exportar a conversa"
+        fileMode: FileDialog.SaveFile
+        nameFilters: ["Markdown (*.md)"]
+        defaultSuffix: "md"
+        currentFolder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+        currentFile: currentFolder + "/conversa-" + Qt.formatDate(new Date(), "yyyy-MM-dd") + ".md"
+        onAccepted: chat.client.exportConversation(selectedFile)
     }
     FileDialog {
         id: fileDialog

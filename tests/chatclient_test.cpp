@@ -262,6 +262,20 @@ private slots:
         QVERIFY(invoke("stop"));
         QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
     }
+    void exportWritesConversationAsMarkdown() {
+        const QString path = m_data.path() + "/exportada.md";
+        QVERIFY(!callBool("exportConversation", QUrl::fromLocalFile(path)));   // sem mensagens não há o que exportar
+        QVERIFY(send("Olá"));
+        QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
+        QVERIFY(callBool("exportConversation", QUrl::fromLocalFile(path)));
+        QFile file(path); QVERIFY(file.open(QIODevice::ReadOnly));
+        const QString md = QString::fromUtf8(file.readAll());
+        QVERIFY(md.startsWith("# Conversa com "));
+        QVERIFY(md.contains("\n## Você\n\nOlá\n"));
+        QVERIFY(md.contains("Resposta: Olá"));
+        QVERIFY(md.indexOf("## Você") < md.indexOf("Resposta: Olá"));
+        QVERIFY(!callBool("exportConversation", QUrl("https://exemplo.com/x.md")));   // só arquivos locais
+    }
     void restartRecoversLastConversationAndQuota() {
         QVERIFY(send("Lembre de mim"));
         QTRY_VERIFY_WITH_TIMEOUT(!flag("busy"), 10000);
