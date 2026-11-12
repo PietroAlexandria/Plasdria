@@ -44,26 +44,25 @@ Rectangle {
         // Cabeçalho
         RowLayout {
             Layout.fillWidth: true; spacing: 8
-            Image {
-                source: "assets/icon.png"
-                Layout.preferredWidth: 32; Layout.preferredHeight: 32
-                sourceSize: Qt.size(64, 64); smooth: true; mipmap: true
-                SequentialAnimation on scale {
-                    running: chat.client.busy && chat.t.animations; loops: Animation.Infinite
-                    onRunningChanged: if (!running) parent.scale = 1
-                    NumberAnimation { to: 1.12; duration: 600; easing.type: Easing.InOutSine }
-                    NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.InOutSine }
-                }
-            }
             ColumnLayout {
                 spacing: 0; Layout.fillWidth: true; Layout.minimumWidth: 40
                 Rectangle {
                     id: providerBtn
                     Layout.maximumWidth: implicitWidth
-                    implicitWidth: providerRow.implicitWidth + 10; implicitHeight: 22; radius: 7
+                    implicitWidth: providerRow.implicitWidth + 10; implicitHeight: 30; radius: 8
                     color: (providerHover.hovered || providerMenu.opened) && !chat.client.busy ? chat.t.cardRaised : "transparent"
                     RowLayout {
-                        id: providerRow; anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4; spacing: 5
+                        id: providerRow; anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4; spacing: 6
+                        ProviderIcon {
+                            provider: chat.client.provider; size: 22; Layout.alignment: Qt.AlignVCenter
+                            // Pulsa enquanto a IA responde.
+                            SequentialAnimation on scale {
+                                running: chat.client.busy && chat.t.animations; loops: Animation.Infinite
+                                onRunningChanged: if (!running) parent.scale = 1
+                                NumberAnimation { to: 1.14; duration: 600; easing.type: Easing.InOutSine }
+                                NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.InOutSine }
+                            }
+                        }
                         Text { text: chat.client.providerName; color: chat.t.ink; font.pixelSize: 15; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true; Layout.minimumWidth: 0; Layout.alignment: Qt.AlignVCenter }
                         Kirigami.Icon { source: "arrow-down"; implicitWidth: 10; implicitHeight: 10; isMask: true; color: chat.t.muted; Layout.alignment: Qt.AlignVCenter }
                     }
@@ -89,10 +88,7 @@ Rectangle {
                                     color: pItemHover.hovered ? chat.t.accentSoft : "transparent"
                                     RowLayout {
                                         anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; spacing: 8
-                                        Rectangle {
-                                            width: 7; height: 7; radius: 4
-                                            color: modelData.id === chat.client.provider ? chat.t.accent : (modelData.available ? chat.t.good : chat.t.faint)
-                                        }
+                                        ProviderIcon { provider: modelData.id; size: 24; opacity: modelData.available || modelData.id === chat.client.provider ? 1 : 0.45; Layout.alignment: Qt.AlignVCenter }
                                         ColumnLayout {
                                             spacing: 0; Layout.fillWidth: true
                                             Text {
@@ -105,6 +101,10 @@ Rectangle {
                                                 text: modelData.subtitle || ""; font.pixelSize: 10
                                                 color: chat.t.muted; elide: Text.ElideRight; Layout.fillWidth: true
                                             }
+                                        }
+                                        Rectangle {
+                                            width: 7; height: 7; radius: 4
+                                            color: modelData.id === chat.client.provider ? chat.t.accent : (modelData.available ? chat.t.good : chat.t.faint)
                                         }
                                     }
                                     HoverHandler { id: pItemHover; cursorShape: Qt.PointingHandCursor }

@@ -54,7 +54,15 @@ Item {
 
         RowLayout {
             visible: !bubble.mine; spacing: 6
-            Image { source: "assets/mark.png"; Layout.preferredHeight: 16; Layout.preferredWidth: 14; fillMode: Image.PreserveAspectFit; smooth: true; mipmap: true }
+            // Ícone da IA que respondeu (pelo nome gravado na mensagem; sem nome, a IA atual).
+            ProviderIcon {
+                size: 16
+                provider: {
+                    const list = bubble.client.providers || []
+                    for (const p of list) if (p.name === bubble.assistantName) return p.id
+                    return bubble.client.provider || ""
+                }
+            }
             Text { text: bubble.assistantName || bubble.client.providerName || "IA"; color: bubble.t.muted; font.pixelSize: 11; font.weight: Font.DemiBold }
             Item { Layout.fillWidth: true }
             IconButton {
