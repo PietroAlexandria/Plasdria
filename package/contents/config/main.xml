@@ -37,6 +37,9 @@
     <entry name="showShortcuts" type="Bool"><default>true</default></entry>
     <entry name="showSpeedTest" type="Bool"><default>true</default></entry>
     <entry name="showClock" type="Bool"><default>true</default></entry>
+    <entry name="showQuick" type="Bool"><default>true</default></entry>
+    <entry name="quickItems" type="String"><default></default></entry>
+    <entry name="sidebarHidden" type="String"><default>[]</default></entry>
   </group>
   <group name="Appearance">
     <entry name="accentColor" type="String"><default>#3daee9</default></entry>
@@ -52,6 +55,7 @@
     <entry name="layout" type="String"><default></default></entry>
     <entry name="shortcuts" type="String"><default>[]</default></entry>
     <entry name="welcomeSeen" type="Int"><default>0</default></entry>
+    <entry name="barMode" type="Bool"><default>false</default></entry>
     <entry name="clockState" type="String"><default></default></entry>
     <entry name="showDay" type="Bool"><default>true</default></entry>
     <entry name="summaryEnabled" type="Bool"><default>true</default></entry>

@@ -10,6 +10,14 @@ PlasmoidItem {
     id: root
     readonly property var cfg: Plasmoid.configuration
     readonly property bool onDesktop: Plasmoid.formFactor === PlasmaCore.Types.Planar
+    // Num painel vertical (barra lateral) o Plasdria mostra um resumo em coluna; o toque abre o completo.
+    // A barra também pode ficar em cima ou embaixo: ali, só o painel criado como barra (barMode) vira barra;
+    // o Plasdria solto num painel comum continua sendo um ícone.
+    readonly property bool inSidebar: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+                                      || (Plasmoid.formFactor === PlasmaCore.Types.Horizontal && cfg.barMode === true)
+    readonly property string barEdge: Plasmoid.location === PlasmaCore.Types.LeftEdge ? "left"
+                                      : Plasmoid.location === PlasmaCore.Types.TopEdge ? "top"
+                                      : Plasmoid.location === PlasmaCore.Types.BottomEdge ? "bottom" : "right"
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     preferredRepresentation: onDesktop ? fullRepresentation : compactRepresentation
     switchWidth: 340; switchHeight: 420
@@ -206,7 +214,46 @@ PlasmoidItem {
         }
     }
 
+    // Na barra: mover de borda, expandir/recolher e minimizar/fixar também pelo clique direito.
+    readonly property bool barCompact: barEdge === "top" || barEdge === "bottom" ? (root.height > 0 && root.height < 48) : (root.width > 0 && root.width < 66)
+    function barMove(edge) { if (edge !== barEdge) sysBackend.createSidebar(edge, {}) }
     Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            visible: root.inSidebar && root.barEdge !== "top"
+            enabled: sysBackend.sidebarBusyEdges.indexOf("top") < 0
+            text: "Mover a barra para cima"; icon.name: "go-up-symbolic"
+            onTriggered: root.barMove("top")
+        },
+        PlasmaCore.Action {
+            visible: root.inSidebar && root.barEdge !== "bottom"
+            enabled: sysBackend.sidebarBusyEdges.indexOf("bottom") < 0
+            text: "Mover a barra para baixo"; icon.name: "go-down-symbolic"
+            onTriggered: root.barMove("bottom")
+        },
+        PlasmaCore.Action {
+            visible: root.inSidebar && root.barEdge !== "left"
+            enabled: sysBackend.sidebarBusyEdges.indexOf("left") < 0
+            text: "Mover a barra para a esquerda"; icon.name: "go-previous-symbolic"
+            onTriggered: root.barMove("left")
+        },
+        PlasmaCore.Action {
+            visible: root.inSidebar && root.barEdge !== "right"
+            enabled: sysBackend.sidebarBusyEdges.indexOf("right") < 0
+            text: "Mover a barra para a direita"; icon.name: "go-next-symbolic"
+            onTriggered: root.barMove("right")
+        },
+        PlasmaCore.Action {
+            visible: root.inSidebar
+            text: root.barCompact ? "Expandir a barra" : "Recolher a barra"
+            icon.name: root.barCompact ? "zoom-in-symbolic" : "zoom-out-symbolic"
+            onTriggered: sysBackend.setSidebarCompact(!root.barCompact)
+        },
+        PlasmaCore.Action {
+            visible: root.inSidebar
+            text: sysBackend.sidebarState === "autohide" ? "Fixar a barra (sempre à vista)" : "Minimizar a barra (aparece ao encostar o mouse)"
+            icon.name: sysBackend.sidebarState === "autohide" ? "window-pin" : "sidebar-collapse-right"
+            onTriggered: sysBackend.setSidebarAutoHide(sysBackend.sidebarState !== "autohide")
+        },
         PlasmaCore.Action {
             text: "Nova conversa"
             icon.name: "list-add"
@@ -252,7 +299,8 @@ PlasmoidItem {
             speed: speedBackend
             clock: clockEngine
             onSaveShortcuts: json => root.cfg.shortcuts = json
-            onWelcomeDone: root.cfg.welcomeSeen = 1
+            onWelcomeDone: root.cfg.welcomeSeen = shell.welcomeVersion
+            onMoreSettingsRequested: Plasmoid.internalAction("configure").trigger()
             events: calendarFeed.events; feedConfigured: calendarFeed.configured; feedStatus: calendarFeed.status
             onEditRequested: on => root.layoutEditing = on
             onSaveReminders: json => root.cfg.reminders = json
@@ -264,8 +312,21 @@ PlasmoidItem {
         }
     }
 
-    compactRepresentation: CompactIcon {
-        t: themeBackend; client: claudeBackend
-        onClicked: root.expanded = !root.expanded
+    compactRepresentation: inSidebar ? sidebarComponent : iconComponent
+    Component {
+        id: iconComponent
+        CompactIcon {
+            t: themeBackend; client: claudeBackend
+            onClicked: root.expanded = !root.expanded
+        }
+    }
+    Component {
+        id: sidebarComponent
+        SidebarView {
+            t: themeBackend; dash: dashBackend; net: netBackend; media: mediaBackend; client: claudeBackend; cfg: root.cfg; sys: sysBackend
+            edge: root.barEdge
+            onOpenRequested: root.expanded = !root.expanded
+            onChatRequested: { root.expanded = true; Qt.callLater(() => { const sh = root.fullRepresentationItem; if (sh && sh.focusChat) sh.focusChat() }) }
+        }
     }
 }

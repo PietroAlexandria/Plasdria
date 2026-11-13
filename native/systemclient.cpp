@@ -104,6 +104,8 @@ SystemClient::SystemClient(QObject *parent) : QObject(parent) {
     connect(&m_gpuTimer, &QTimer::timeout, this, &SystemClient::sampleGpu);
     m_topTimer.setInterval(3000);
     connect(&m_topTimer, &QTimer::timeout, this, &SystemClient::sampleProcesses);
+    m_quickTimer.setInterval(4000);
+    connect(&m_quickTimer, &QTimer::timeout, this, &SystemClient::pollQuick);
 
     // Mudanças de volume/brilho são aplicadas em lote enquanto o controle é arrastado.
     m_applyAudio.setSingleShot(true); m_applyAudio.setInterval(70);
@@ -125,6 +127,8 @@ SystemClient::SystemClient(QObject *parent) : QObject(parent) {
 }
 
 SystemClient::~SystemClient() {
+    // Remover o widget não pode deixar a luz noturna pausada ou a tela sem apagar até reiniciar o Plasma.
+    setDoNotDisturb(false); setNightLight(true); setCaffeine(false);
     if (!m_audioEvents) return;
     m_audioEvents->disconnect(this);
     m_audioEvents->kill();
@@ -151,7 +155,8 @@ void SystemClient::setActive(bool on) {
 
 // Liga ou desliga as leituras de um assunto conforme haja interessados e o widget esteja ativo.
 void SystemClient::apply(const QString &topic) {
-    const bool want = m_active && m_users.value(topic) > 0;
+    // As ações rápidas também aparecem na barra lateral, que fica sempre à vista mesmo com o widget recolhido.
+    const bool want = (m_active || topic == "quick") && m_users.value(topic) > 0;
     if (topic == "audio") {
         if (want && !m_audioTimer.isActive()) { pollAudio(); m_audioTimer.start(); startAudioEvents(); }
         else if (!want) { m_audioTimer.stop(); m_audioDebounce.stop(); stopAudioEvents(); }
@@ -167,6 +172,9 @@ void SystemClient::apply(const QString &topic) {
             m_prevRc6 = -1;   // a estimativa de uso precisa de duas leituras seguidas
             sampleGpu(); m_gpuTimer.start();
         } else if (!want) m_gpuTimer.stop();
+    } else if (topic == "quick") {
+        if (want && !m_quickTimer.isActive()) { pollQuick(); m_quickTimer.start(); }
+        else if (!want) m_quickTimer.stop();
     } else if (topic == "top") {
         if (want && !m_topActive) {
             m_topActive = true; m_prevJiffies.clear(); m_prevTopAt = 0;
@@ -606,4 +614,324 @@ bool SystemClient::launch(const QString &target) {
     if (path.startsWith("~/")) path = QDir::homePath() + path.mid(1);
     if (path.startsWith("file://")) path = QUrl(path).toLocalFile();
     return QFileInfo::exists(path) && QProcess::startDetached("xdg-open", {path});
+}
+
+// ── Ações rápidas ─────────────────────────────────────────────────────────
+namespace {
+// Lê todas as propriedades de uma interface sem travar a interface; done recebe {} se o serviço não existir.
+void getAll(QObject *owner, const QDBusConnection &bus, const QString &service, const QString &path, const QString &iface,
+            std::function<void(const QVariantMap &, bool)> done) {
+    auto message = QDBusMessage::createMethodCall(service, path, "org.freedesktop.DBus.Properties", "GetAll");
+    message << iface;
+    auto *watcher = new QDBusPendingCallWatcher(bus.asyncCall(message, 3000), owner);
+    QObject::connect(watcher, &QDBusPendingCallWatcher::finished, owner, [done](QDBusPendingCallWatcher *w) {
+        w->deleteLater();
+        const QDBusMessage reply = w->reply();
+        if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().isEmpty()) { done({}, false); return; }
+        done(qdbus_cast<QVariantMap>(reply.arguments().first()), true);
+    });
+}
+
+void setDBusProperty(const QDBusConnection &bus, const QString &service, const QString &path, const QString &iface,
+                 const QString &name, const QVariant &value) {
+    auto message = QDBusMessage::createMethodCall(service, path, "org.freedesktop.DBus.Properties", "Set");
+    message << iface << name << QVariant::fromValue(QDBusVariant(value));
+    bus.asyncCall(message, 5000);
+}
+
+// Chama um método que devolve um "cookie" (uint) e o entrega a done (0 se falhar).
+void callCookie(QObject *owner, const QDBusConnection &bus, QDBusMessage message, std::function<void(uint)> done) {
+    auto *watcher = new QDBusPendingCallWatcher(bus.asyncCall(message, 3000), owner);
+    QObject::connect(watcher, &QDBusPendingCallWatcher::finished, owner, [done](QDBusPendingCallWatcher *w) {
+        w->deleteLater();
+        const QDBusMessage reply = w->reply();
+        done(reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty() ? reply.arguments().first().toUInt() : 0);
+    });
+}
+
+bool hasWifiHardware() { return !QDir("/sys/class/ieee80211").entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty(); }
+bool canSuspendToRam() { return readText("/sys/power/state").split(' ').contains("mem"); }
+}
+
+void SystemClient::setQuick(const QVariantMap &values) {
+    bool changed = false;
+    for (auto it = values.begin(); it != values.end(); ++it)
+        if (m_quick.value(it.key()) != it.value()) { m_quick.insert(it.key(), it.value()); changed = true; }
+    if (changed) emit quickChanged();
+}
+
+void SystemClient::pollQuick() {
+    auto session = QDBusConnection::sessionBus(), system = QDBusConnection::systemBus();
+    setQuick({{"wifiAvailable", hasWifiHardware()}, {"canSuspend", canSuspendToRam()},
+              {"dnd", m_dndCookie != 0}, {"caffeine", m_screenCookie != 0 || m_sleepCookie != 0}});
+
+    getAll(this, session, "org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications",
+           [this](const QVariantMap &p, bool ok) {
+        const bool inhibited = p.value("Inhibited").toBool();
+        setQuick({{"dndAvailable", ok}, {"dndOther", inhibited && m_dndCookie == 0}});
+    });
+    getAll(this, session, "org.kde.KWin", "/org/kde/KWin/NightLight", "org.kde.KWin.NightLight", [this](const QVariantMap &p, bool ok) {
+        const bool enabled = p.value("enabled").toBool(), inhibited = p.value("inhibited").toBool();
+        setQuick({{"nightAvailable", ok && p.value("available").toBool()}, {"nightEnabled", enabled},
+                  {"night", enabled && !inhibited}, {"nightOther", inhibited && m_nightCookie == 0}});
+    });
+
+    // power-profiles-daemon mudou de nome; tenta o atual e depois o antigo.
+    auto readProfiles = [this, system](const QString &service, const QString &path, const QString &iface, auto &&fallback) {
+        getAll(this, system, service, path, iface, [this, service, fallback](const QVariantMap &p, bool ok) {
+            if (!ok) { fallback(); return; }
+            m_profilesService = service;
+            QVariantList profiles;
+            const QDBusArgument arg = p.value("Profiles").value<QDBusArgument>();
+            if (arg.currentType() == QDBusArgument::ArrayType) {
+                arg.beginArray();
+                while (!arg.atEnd()) { QVariantMap entry; arg >> entry; profiles.append(entry.value("Profile").toString()); }
+                arg.endArray();
+            }
+            setQuick({{"profiles", profiles}, {"profile", p.value("ActiveProfile").toString()}});
+        });
+    };
+    readProfiles(QStringLiteral("org.freedesktop.UPower.PowerProfiles"), QStringLiteral("/org/freedesktop/UPower/PowerProfiles"),
+                 QStringLiteral("org.freedesktop.UPower.PowerProfiles"), [this, readProfiles] {
+        readProfiles(QStringLiteral("net.hadess.PowerProfiles"), QStringLiteral("/net/hadess/PowerProfiles"),
+                     QStringLiteral("net.hadess.PowerProfiles"), [this] { m_profilesService.clear(); setQuick({{"profiles", QVariantList{}}, {"profile", QString()}}); });
+    });
+
+    getAll(this, system, "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager",
+           [this](const QVariantMap &p, bool ok) {
+        setQuick({{"wifi", ok && p.value("WirelessEnabled").toBool()},
+                  {"wifiAvailable", ok && hasWifiHardware() && p.value("WirelessHardwareEnabled").toBool()}});
+    });
+}
+
+void SystemClient::setDoNotDisturb(bool on) {
+    auto bus = QDBusConnection::sessionBus();
+    if (!on) {
+        if (m_dndCookie == 0) return;
+        auto message = QDBusMessage::createMethodCall("org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "UnInhibit");
+        message << m_dndCookie;
+        bus.asyncCall(message, 3000);
+        m_dndCookie = 0;
+        setQuick({{"dnd", false}});
+        QTimer::singleShot(400, this, &SystemClient::pollQuick);
+        return;
+    }
+    if (m_dndCookie != 0) return;
+    auto message = QDBusMessage::createMethodCall("org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "Inhibit");
+    message << QStringLiteral("plasdria") << QStringLiteral("Não perturbe ligado no Plasdria") << QVariantMap{};
+    callCookie(this, bus, message, [this](uint cookie) { m_dndCookie = cookie; setQuick({{"dnd", cookie != 0}}); pollQuick(); });
+}
+
+void SystemClient::setNightLight(bool on) {
+    auto bus = QDBusConnection::sessionBus();
+    if (on) {   // volta a valer o que está nas Configurações do sistema
+        if (m_nightCookie == 0) return;
+        auto message = QDBusMessage::createMethodCall("org.kde.KWin", "/org/kde/KWin/NightLight", "org.kde.KWin.NightLight", "uninhibit");
+        message << m_nightCookie;
+        bus.asyncCall(message, 3000);
+        m_nightCookie = 0;
+        QTimer::singleShot(400, this, &SystemClient::pollQuick);
+        return;
+    }
+    if (m_nightCookie != 0) return;
+    auto message = QDBusMessage::createMethodCall("org.kde.KWin", "/org/kde/KWin/NightLight", "org.kde.KWin.NightLight", "inhibit");
+    callCookie(this, bus, message, [this](uint cookie) { m_nightCookie = cookie; pollQuick(); });
+}
+
+void SystemClient::setPowerProfile(const QString &profile) {
+    if (m_profilesService.isEmpty() || !m_quick.value("profiles").toList().contains(profile)) return;
+    const bool modern = m_profilesService.startsWith("org.freedesktop");
+    setDBusProperty(QDBusConnection::systemBus(), m_profilesService,
+                modern ? "/org/freedesktop/UPower/PowerProfiles" : "/net/hadess/PowerProfiles",
+                m_profilesService, "ActiveProfile", profile);
+    setQuick({{"profile", profile}});
+    QTimer::singleShot(600, this, &SystemClient::pollQuick);
+}
+
+// Mantém acordado: nem bloqueio/apagar da tela, nem suspensão automática.
+void SystemClient::setCaffeine(bool on) {
+    auto bus = QDBusConnection::sessionBus();
+    if (!on) {
+        if (m_screenCookie) {
+            auto m = QDBusMessage::createMethodCall("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", "UnInhibit");
+            m << m_screenCookie; bus.asyncCall(m, 3000); m_screenCookie = 0;
+        }
+        if (m_sleepCookie) {
+            auto m = QDBusMessage::createMethodCall("org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "UnInhibit");
+            m << m_sleepCookie; bus.asyncCall(m, 3000); m_sleepCookie = 0;
+        }
+        setQuick({{"caffeine", false}});
+        return;
+    }
+    if (m_screenCookie || m_sleepCookie) return;
+    const QString app = QStringLiteral("Plasdria"), reason = QStringLiteral("Manter acordado (ação rápida)");
+    auto screen = QDBusMessage::createMethodCall("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", "Inhibit");
+    screen << app << reason;
+    callCookie(this, bus, screen, [this](uint cookie) { m_screenCookie = cookie; setQuick({{"caffeine", m_screenCookie || m_sleepCookie}}); });
+    auto sleep = QDBusMessage::createMethodCall("org.freedesktop.PowerManagement", "/org/freedesktop/PowerManagement/Inhibit", "org.freedesktop.PowerManagement.Inhibit", "Inhibit");
+    sleep << app << reason;
+    callCookie(this, bus, sleep, [this](uint cookie) { m_sleepCookie = cookie; setQuick({{"caffeine", m_screenCookie || m_sleepCookie}}); });
+}
+
+void SystemClient::setWifi(bool on) {
+    setDBusProperty(QDBusConnection::systemBus(), "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager",
+                "org.freedesktop.NetworkManager", "WirelessEnabled", on);
+    setQuick({{"wifi", on}});
+    QTimer::singleShot(800, this, &SystemClient::pollQuick);
+}
+
+void SystemClient::lockScreen() {
+    QDBusConnection::sessionBus().asyncCall(QDBusMessage::createMethodCall("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", "Lock"), 3000);
+}
+
+void SystemClient::suspend() {
+    auto message = QDBusMessage::createMethodCall("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "Suspend");
+    message << true;   // interativo: o polkit pode pedir confirmação
+    QDBusConnection::systemBus().asyncCall(message, 5000);
+}
+
+// Abre o diálogo do próprio Plasma (sair, reiniciar, desligar), que já pede confirmação.
+void SystemClient::sessionMenu() {
+    QDBusConnection::sessionBus().asyncCall(QDBusMessage::createMethodCall("org.kde.LogoutPrompt", "/LogoutPrompt", "org.kde.LogoutPrompt", "promptAll"), 3000);
+}
+
+// ── Barra lateral ─────────────────────────────────────────────────────────
+// O script roda no próprio plasmashell pela API de scripts do Plasma. Vai por um processo à parte (qdbus6):
+// o widget vive dentro do plasmashell, e uma chamada a si mesmo no meio de um clique poderia travar.
+void SystemClient::runShellScript(const QString &script) {
+    auto *process = new QProcess(this);
+    connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this, process](int code, QProcess::ExitStatus) {
+        const QString out = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
+        process->deleteLater();
+        const QString status = code == 0 && !out.isEmpty() ? out.section('\n', -1).trimmed() : QStringLiteral("error");
+        if (status.startsWith("state:")) {   // só consulta, sem mensagem: "state:pinned:right"
+            setSidebarState(status.section(':', 1, 1));
+            const QString edge = status.section(':', 2, 2);
+            const QStringList busy = status.section(':', 3, 3).split(',', Qt::SkipEmptyParts);
+            if (edge != m_sidebarEdge || busy != m_sidebarBusyEdges) { m_sidebarEdge = edge; m_sidebarBusyEdges = busy; emit sidebarStateChanged(); }
+            return;
+        }
+        if (status.startsWith("occupied:")) {
+            m_sidebarBusyEdges = status.section(':', 1, 1).split(',', Qt::SkipEmptyParts);
+            emit sidebarStateChanged();
+            emit sidebarResult(QStringLiteral("occupied"));
+            return;
+        }
+        if (status.startsWith("created:") || status.startsWith("moved:")) {
+            m_sidebarEdge = status.section(':', 1, 1);
+            setSidebarState(m_sidebarState == "autohide" && status.startsWith("moved:") ? "autohide" : "pinned");
+            emit sidebarStateChanged();
+            emit sidebarResult(status.section(':', 0, 0));
+            return;
+        }
+        if (status == "pinned") setSidebarState("pinned");
+        else if (status == "autohide") setSidebarState("autohide");
+        else if (status == "removed" || status == "none") setSidebarState("none");
+        else if (status == "exists") refreshSidebar();
+        emit sidebarResult(status);
+    });
+    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart) return;
+        process->deleteLater();
+        emit sidebarResult(QStringLiteral("error"));
+    });
+    process->start("qdbus6", {"org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell.evaluateScript", script});
+}
+
+// Acha a barra do Plasdria: o painel com um Plasdria marcado como barra (barMode) ou, para barras criadas
+// antes dessa marca, um painel lateral com o Plasdria. O Plasdria solto num painel comum não conta.
+static const char *kFindBar = R"JS(
+function isBar(p) {
+    var ws = p.widgets("local.plasdria");
+    for (var i = 0; i < ws.length; ++i) {
+        ws[i].currentConfigGroup = ["Data"];
+        if (String(ws[i].readConfig("barMode", false)) == "true") return true;
+    }
+    return ws.length > 0 && (p.location == "left" || p.location == "right");
+}
+function markBar(p) {
+    var ws = p.widgets("local.plasdria");
+    for (var i = 0; i < ws.length; ++i) { ws[i].currentConfigGroup = ["Data"]; ws[i].writeConfig("barMode", true); ws[i].reloadConfig(); }
+}
+function thicknessFor(edge) { return edge == "top" || edge == "bottom" ? 56 : 84; }
+function compactFor(edge) { return edge == "top" || edge == "bottom" ? 40 : 56; }
+function isCompact(p) { return p.height < thicknessFor(p.location) - 4; }
+var found = panels().filter(isBar);
+// Bordas com outro painel (ex.: a barra de tarefas): no Plasma 6 painéis na mesma borda ficam um por cima do outro.
+var busy = panels().filter(function (p) { return !isBar(p); }).map(function (p) { return p.location; });
+)JS";
+
+namespace {
+QString jsString(const QString &value) {
+    return QString::fromUtf8(QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact)).mid(1).chopped(1);
+}
+}
+
+void SystemClient::createSidebar(const QString &edge, const QVariantMap &config) {
+    static const QStringList edges = {"left", "right", "top", "bottom"};
+    const QString location = edges.contains(edge) ? edge : QStringLiteral("right");
+    // Os valores entram como JSON, nunca colados como código.
+    QVariantMap withMark = config;
+    QVariantMap data = withMark.value("Data").toMap();
+    data.insert("barMode", true);
+    withMark.insert("Data", data);
+    const QString json = QString::fromUtf8(QJsonDocument(QJsonObject::fromVariantMap(withMark)).toJson(QJsonDocument::Compact));
+    const QString script = QString::fromUtf8(kFindBar) + QStringLiteral(R"JS(
+var edge = %1;
+if (busy.indexOf(edge) >= 0) {
+    print("occupied:" + busy.join(","));
+} else if (found.length > 0) {
+    // Já existe: só muda de borda.
+    var b = found[0];
+    markBar(b);
+    if (b.location == edge) { print("exists"); } else {
+        var compact = isCompact(b);   // mudar de borda mantém a barra expandida ou recolhida
+        b.location = edge; b.height = compact ? compactFor(edge) : thicknessFor(edge);
+        print("moved:" + edge);
+    }
+} else {
+    var p = new Panel("org.kde.panel");
+    p.location = edge;
+    p.height = thicknessFor(edge);
+    p.hiding = "none";
+    try { p.floating = true; } catch (e) {}
+    var w = p.addWidget("local.plasdria");
+    var cfg = %2;
+    for (var group in cfg) {
+        w.currentConfigGroup = [group];
+        for (var key in cfg[group]) w.writeConfig(key, cfg[group][key]);
+    }
+    w.reloadConfig();
+    print("created:" + edge);
+}
+)JS").arg(jsString(location), json);
+    runShellScript(script);
+}
+
+void SystemClient::removeSidebars() {
+    runShellScript(QString::fromUtf8(kFindBar) + QStringLiteral(R"JS(
+for (var i = 0; i < found.length; ++i) found[i].remove();
+print(found.length > 0 ? "removed" : "none");
+)JS"));
+}
+
+void SystemClient::setSidebarAutoHide(bool on) {
+    runShellScript(QString::fromUtf8(kFindBar) + QStringLiteral(R"JS(
+for (var i = 0; i < found.length; ++i) found[i].hiding = %1 ? "autohide" : "none";
+print(found.length == 0 ? "none" : %1 ? "autohide" : "pinned");
+)JS").arg(on ? "true" : "false"));
+}
+
+void SystemClient::refreshSidebar() {
+    runShellScript(QString::fromUtf8(kFindBar) + QStringLiteral(R"JS(
+print((found.length == 0 ? "state:none:" : "state:" + (found[0].hiding == "autohide" ? "autohide" : "pinned") + ":" + found[0].location) + ":" + busy.join(","));
+)JS"));
+}
+
+// Recolhida: a barra fica mais fina e mostra só o essencial. Expandida: espessura normal.
+void SystemClient::setSidebarCompact(bool compact) {
+    runShellScript(QString::fromUtf8(kFindBar) + QStringLiteral(R"JS(
+for (var i = 0; i < found.length; ++i) found[i].height = %1 ? compactFor(found[i].location) : thicknessFor(found[i].location);
+print(found.length == 0 ? "none" : %1 ? "compact" : "expanded");
+)JS").arg(compact ? "true" : "false"));
 }

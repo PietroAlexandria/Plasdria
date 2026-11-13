@@ -44,6 +44,13 @@ class SystemClient : public QObject {
     Q_PROPERTY(double gpuMemoryUsed READ gpuMemoryUsed NOTIFY gpuChanged)     // bytes, -1
     Q_PROPERTY(double gpuMemoryTotal READ gpuMemoryTotal NOTIFY gpuChanged)
     Q_PROPERTY(QVariantList gpuHistory READ gpuHistory NOTIFY gpuChanged)     // últimas amostras de uso (%)
+    // Ações rápidas: {dndAvailable, dnd, dndOther, nightAvailable, nightEnabled, night, nightOther, profiles: [..],
+    //                 profile, caffeine, wifiAvailable, wifi, canSuspend}
+    Q_PROPERTY(QVariantMap quick READ quick NOTIFY quickChanged)
+    // Barra lateral: "none" (não existe), "pinned" (sempre à vista), "autohide" (minimizada) ou "" (ainda não consultado).
+    Q_PROPERTY(QString sidebarState READ sidebarState NOTIFY sidebarStateChanged)
+    Q_PROPERTY(QString sidebarEdge READ sidebarEdge NOTIFY sidebarStateChanged)   // left, right, top ou bottom
+    Q_PROPERTY(QStringList sidebarBusyEdges READ sidebarBusyEdges NOTIFY sidebarStateChanged)   // bordas com outro painel
     // false (ex.: painel recolhido) pausa todas as leituras; elas voltam sozinhas quando fica true.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 public:
@@ -52,7 +59,7 @@ public:
 
     bool active() const { return m_active; }
     void setActive(bool on);
-    // Quem mostra dados avisa que precisa deles: "audio", "brightness", "bluetooth", "gpu" ou "top".
+    // Quem mostra dados avisa que precisa deles: "audio", "brightness", "bluetooth", "gpu", "top" ou "quick" (ações rápidas).
     // As leituras só rodam enquanto houver pelo menos um interessado (recriar um cartão adquire o novo
     // antes de liberar o antigo, então nunca chega a zero).
     Q_INVOKABLE void acquire(const QString &topic);
@@ -85,6 +92,10 @@ public:
     double gpuMemoryUsed() const { return m_gpuMemUsed; }
     double gpuMemoryTotal() const { return m_gpuMemTotal; }
     QVariantList gpuHistory() const { return m_gpuHistory; }
+    QVariantMap quick() const { return m_quick; }
+    QString sidebarState() const { return m_sidebarState; }
+    QString sidebarEdge() const { return m_sidebarEdge; }
+    QStringList sidebarBusyEdges() const { return m_sidebarBusyEdges; }
 
     Q_INVOKABLE void setAudioVolume(double volume);
     Q_INVOKABLE void setAudioMuted(bool muted);
@@ -96,6 +107,24 @@ public:
     Q_INVOKABLE QVariantList applications();
     // "app:<id-do-.desktop>", endereço (http/https/mailto) ou caminho de arquivo/pasta.
     Q_INVOKABLE bool launch(const QString &target);
+    // Ações rápidas. Não perturbe, luz noturna (pausa) e "manter acordado" valem enquanto o Plasma estiver aberto.
+    Q_INVOKABLE void setDoNotDisturb(bool on);
+    Q_INVOKABLE void setNightLight(bool on);
+    Q_INVOKABLE void setPowerProfile(const QString &profile);
+    Q_INVOKABLE void setCaffeine(bool on);
+    Q_INVOKABLE void setWifi(bool on);
+    Q_INVOKABLE void lockScreen();
+    Q_INVOKABLE void suspend();
+    Q_INVOKABLE void sessionMenu();
+    // Barra: cria um painel do Plasma na borda ("left"/"right"/"top"/"bottom") com uma cópia do Plasdria, ou move a que já existe,
+    // levando as configurações em config ({grupo: {chave: valor}}). Responde em sidebarResult:
+    // "created", "moved", "exists", "occupied" (já há outro painel na borda), "compact", "expanded", "removed", "none" ou "error".
+    Q_INVOKABLE void createSidebar(const QString &edge, const QVariantMap &config);
+    Q_INVOKABLE void removeSidebars();
+    // true: a barra se esconde e volta ao encostar o mouse na borda ("autohide"); false: fica sempre à vista ("pinned").
+    Q_INVOKABLE void setSidebarAutoHide(bool on);
+    Q_INVOKABLE void refreshSidebar();
+    Q_INVOKABLE void setSidebarCompact(bool compact);
 
 signals:
     void activeChanged();
@@ -104,6 +133,9 @@ signals:
     void bluetoothChanged();
     void topChanged();
     void gpuChanged();
+    void quickChanged();
+    void sidebarResult(const QString &status);
+    void sidebarStateChanged();
 
 private:
     void apply(const QString &topic);
@@ -116,6 +148,9 @@ private:
     void sampleGpu();
     void findBacklight();
     void findGpu();
+    void pollQuick();
+    void runShellScript(const QString &script);
+    void setQuick(const QVariantMap &values);
     void run(const QStringList &args, std::function<void(const QByteArray &)> done = {});
 
     bool m_active = true;
@@ -150,4 +185,13 @@ private:
     QVariantList m_gpuHistory;
     // aplicativos
     QVariantList m_apps;
+    // ações rápidas: "cookies" das pausas pedidas por este widget (0 = nenhuma)
+    QTimer m_quickTimer;
+    QVariantMap m_quick;
+    uint m_dndCookie = 0, m_nightCookie = 0, m_screenCookie = 0, m_sleepCookie = 0;
+    QString m_profilesService;
+    QString m_sidebarState;
+    QString m_sidebarEdge;
+    QStringList m_sidebarBusyEdges;
+    void setSidebarState(const QString &state) { if (state != m_sidebarState) { m_sidebarState = state; emit sidebarStateChanged(); } }
 };

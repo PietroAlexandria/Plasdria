@@ -15,7 +15,7 @@ Item {
         property bool showSystem: true; property bool showConnections: true; property bool showCalendar: true
         property bool showMedia: true; property bool showNetwork: true; property bool showReminders: true; property bool showNews: true
         property string reminders: "[]"; property string userName: "Teste"
-        property int welcomeSeen: 1
+        property int welcomeSeen: 2
     }
     Theme { id: theme }
     Backend.ClaudeClient { id: claude }
@@ -47,8 +47,10 @@ Item {
         function init() { shell.editing = false; shell.resetLayout(); root.saved = []; wait(150) }
 
         function test_boas_vindas_escolhe_cartoes_e_so_aparece_uma_vez() {
-            cfg.welcomeSeen = 1
+            cfg.welcomeSeen = shell.welcomeVersion
             verify(!shell.welcomeNeeded, "já visto: nada aparece")
+            cfg.welcomeSeen = 1
+            verify(shell.welcomeNeeded, "versão anterior vista: aparece de novo para os cartões novos")
             cfg.welcomeSeen = 0
             verify(shell.welcomeNeeded)
             verify(!shell.welcomeVisible, "sem os controles do sistema (sys nulo) não há o que oferecer")
@@ -60,13 +62,13 @@ Item {
             verify(shell.hiddenIds.indexOf("clock") >= 0)
             compare(root.welcomed, 1, "avisa o main.qml para gravar que já foi visto")
             verify(shell.welcomeDismissed)
-            cfg.welcomeSeen = 1
+            cfg.welcomeSeen = shell.welcomeVersion
         }
 
         function test_modo_largo() { compare(shell.mode, "wide") }
 
         function test_cartoes_novos_comecam_ocultos() {
-            const novos = ["audio", "bluetooth", "clock", "day", "gpu", "shortcuts", "speedtest", "top"]
+            const novos = ["audio", "bluetooth", "clock", "day", "gpu", "quick", "shortcuts", "speedtest", "top"]
             compare(shell.hiddenIds.slice().sort(), novos)
             for (const id of novos) for (const col of shell.colIds) verify(col.indexOf(id) < 0, id + " fora das colunas")
             // Sem o sistema disponível (sys nulo) só sobra o que não depende dele: o resumo do dia.

@@ -39,6 +39,7 @@ Um widget para KDE Plasma 6 com chat integrado ao **Antigravity**, **Claude** e 
 | **Teste de velocidade** | Mede latência, jitter, download e upload com os servidores públicos da Cloudflare (`speed.cloudflare.com`), com velocidade ao vivo, barra de progresso e histórico dos últimos testes. **Só roda quando você toca em Iniciar** e usa de 50 a 300 MB de dados, conforme a conexão. Nada é enviado além dos dados de teste: nenhum IP ou identificação é guardado. |
 | **Cronômetro e pomodoro** | Cronômetro com voltas, timer (1 a 600 min) e pomodoro (foco, pausa curta e longa depois de 4 focos, com contagem do dia). O motor roda no widget e avisa com notificação do sistema mesmo com o cartão oculto; o estado sobrevive a reiniciar o Plasma. As durações do pomodoro são configuráveis. |
 | **Resumo do dia** | Agenda de hoje, lembretes (atrasados, de hoje e sem data) e clima com dicas (guarda-chuva, calor, UV) num só cartão, montado no próprio widget, sem IA. O botão **Resumir com a IA** manda esse resumo ao chat para uma versão comentada. Uma notificação diária (a partir da hora escolhida, padrão 8 h) traz o resumo curto, com os botões **Ver resumo** e **Resumir com a IA**. |
+| **Ações rápidas** | Botões de liga e desliga para **Não perturbe**, **Luz noturna** (pausa e retoma o que está nas Configurações do sistema), **Manter acordado** (a tela não apaga nem bloqueia e o computador não suspende) e **Wi-Fi**, mais o **perfil de energia** (economia, equilibrado ou desempenho, pelo power-profiles-daemon) e os botões **Bloquear**, **Suspender**, **Captura** (Spectacle) e **Desligar…** (abre o diálogo do Plasma, que pede confirmação). Você escolhe quais botões aparecem e a ordem deles em ⚙ → Ações rápidas. O que não existe no computador não aparece. Não perturbe, a pausa da luz noturna e manter acordado valem enquanto o Plasma estiver aberto e são desfeitos se o widget for removido. Só lê o estado enquanto o cartão está na tela. |
 | **Notícias** | Lista de manchetes do Google News Brasil com fonte e horário, tema configurável (Tecnologia, Esportes, Economia…). |
 
 **Layout editável.** Clique em **✎ Editar** ao lado do logo, no topo do widget (ou clique direito → **Editar layout**) e reorganize na mão: arraste os cartões pelo nome para outra posição ou coluna, oculte o que não usa (e traga de volta pela barra), puxe as divisões entre as colunas para mudar a largura e use **Restaurar padrão** se quiser recomeçar. O arranjo fica salvo. Nos tamanhos médio e estreito a edição usa setas ▲ ▼ para mudar a ordem dos cartões.
@@ -49,16 +50,30 @@ Na primeira abertura (e depois de atualizações com cartões novos) o Plasdria 
 
 <img src="docs/screenshot-light.png" width="900" alt="Plasdria no tema claro" />
 
+**Barra lateral, como um app.** Além do widget na área de trabalho, o Plasdria pode ficar numa barra fina na borda da tela, sempre à vista: horário e data, clima, anéis de CPU e memória, bateria, conexão (com a latência), música (tocar/pausar), as ações rápidas e um botão de conversar. Um toque no logo abre o Plasdria completo por cima, como uma janela de app; o botão de conversar já abre no campo do chat. Crie a barra em **⚙ → Barra lateral** escolhendo a borda: **Direita**, **Esquerda**, **Em cima** ou **Embaixo**. Nas laterais ela é uma coluna; em cima e embaixo vira uma linha, com os mesmos itens lado a lado. Escolher outra borda move a barra que já existe. Uma borda que já tem outro painel (como a barra de tarefas) aparece como ocupada, porque no Plasma dois painéis na mesma borda ficam um por cima do outro. No início da barra ficam três botões, que também estão no clique direito dela:
+
+- **Minimizar / Fixar**: minimizada, ela se esconde e volta quando o mouse encosta na borda da tela; o mesmo botão (agora um alfinete) a fixa de novo.
+- **Recolher / Expandir**: recolhida, a barra fica mais fina e mostra só o essencial (sem data, latência, título da música e nomes dos anéis); expandida, volta ao tamanho normal com tudo.
+- **Mover**: mostra setas para levar a barra para cima, para baixo, para a esquerda ou para a direita. Ela mantém o tamanho escolhido, e as bordas que já têm outro painel ficam apagadas. Ela é um painel do Plasma: clique direito nela → **Mostrar configurações do painel** para mudar a largura, deixá-la flutuante ou fazê-la se esconder sozinha. Também dá para colocar o Plasdria em qualquer painel vertical por **Adicionar widgets**. A barra é outra cópia do widget: leva a aparência e o básico desta, mas os lembretes e o layout dela são próprios, e o resumo diário e os alertas continuam só no widget da área de trabalho, para não chegarem repetidos.
+
 O layout se adapta ao espaço: em telas largas, o **painel geral** fica em cima e os cartões e o chat embaixo, preenchendo todo o espaço; em tamanho médio (ou quando a altura é curta), painel e cartões rolam à esquerda, em uma ou duas colunas conforme a largura, com o chat ao lado; quando estreito (como no painel do Plasma), há abas **Painel** / **Chat**.
 
 <img src="docs/screenshot-narrow.png" width="260" alt="Plasdria em modo estreito, com abas" />
 
 ## Configurações
 
-Clique com o botão direito no widget → **Configurar Plasdria…**
+O botão **⚙** ao lado do logo (e do **✎ Editar**) abre as configurações **dentro do próprio widget**, e tudo vale na hora:
+
+- **Aparência**: tema, tamanho geral, espaço nos cartões, tamanho dos ícones, cor de destaque, opacidade e animações.
+- **Cartões**: ligue ou desligue cada cartão. O que você liga entra na coluna com menos cartões.
+- **Ações rápidas**: escolha quais botões o cartão mostra e em que ordem (▲ ▼).
+- **Barra lateral**: cria a barra em qualquer borda (direita, esquerda, em cima ou embaixo), move, minimiza, fixa ou remove e escolhe o que ela mostra.
+- **Geral**: seu nome, IA padrão, notificação diária do resumo, aviso antes dos eventos e alertas do sistema.
+
+**Mais opções…** (ou clique direito no widget → **Configurar Plasdria…**) abre a janela completa do Plasma:
 
 - **Geral** — seu nome para a saudação, links iCal da agenda (um por linha), cidade (busca por nome) ou detecção automática, IA padrão (Antigravity, Claude, Codex, Gemini CLI, Ollama ou API Compatível), modelo e esforço padrão, endpoint/chave para API compatível e tema das notícias.
-- **Cartões** — escolha quais cartões aparecem (a posição de cada um se edita no próprio widget).
+- **Cartões** — escolha quais cartões aparecem e quais botões as Ações rápidas mostram (a posição e a ordem se editam no próprio widget).
 - **Aparência** — tema escuro, claro ou do sistema (acompanha o Plasma); **tamanho geral** de 50% a 160% (fontes, ícones e cartões juntos, com botões Pequeno/Normal/Grande; o layout se reorganiza sozinho para caber); **espaço nos cartões** (compacto, normal ou confortável); **tamanho dos ícones**; cor de destaque, opacidade do fundo e animações.
 - **Alertas do sistema** — notificação única quando a bateria fica baixa (e não está na tomada), o disco enche, a CPU esquenta ou a internet cai (e quando volta). Cada notificação traz botões: **Silenciar 1 h** e um atalho útil (abrir o widget, **Ver maiores consumidores** para CPU quente, **Testar a conexão** para internet fora). Limites configuráveis em Configurar → Geral, 0 desliga cada um; cada aviso só repete depois que o valor se recupera.
 - **Atalho global** — defina uma tecla em Configurar → Atalhos de teclado (clique direito no widget): ela abre o widget e leva o cursor ao campo do chat.
@@ -118,13 +133,14 @@ Pela linha de comando: `./build.sh`, `./install.sh`, `bash tests/run.sh` e `qml6
 | Rede | `/proc/net/dev`, NetworkManager via D-Bus |
 | Sistema e baterias | `/proc`, `/sys` (hwmon, backlight, drm), UPower e BlueZ; `nvidia-smi` quando disponível |
 | Áudio, brilho e Bluetooth | `pactl` (PipeWire/PulseAudio), logind (brilho), BlueZ e rfkill |
+| Ações rápidas | D-Bus: notificações do Plasma, luz noturna do KWin, power-profiles-daemon, NetworkManager, ScreenSaver/PowerManagement (manter acordado), logind (suspender) e o diálogo de sair do Plasma |
 | Teste de velocidade | HTTPS com `speed.cloudflare.com` (`/__down` e `/__up`), várias conexões em paralelo |
 | Clima e cidades | Open-Meteo (atual, por hora, 7 dias e geocodificação) |
 | Notícias | RSS do Google News Brasil |
 
 ## Consumo
 
-Os cartões de áudio e brilho, Bluetooth, GPU e maiores consumidores só leem o sistema **enquanto estão na tela**, e tudo pausa quando o widget está recolhido em um painel. O áudio é atualizado por eventos do PipeWire/PulseAudio (`pactl subscribe`), sem consultas periódicas: com o cartão de áudio fechado são 0 chamadas ao `pactl` (eram 1 por segundo) e, com ele aberto, 1 conexão contínua.
+Os cartões de áudio e brilho, Bluetooth, GPU, ações rápidas e maiores consumidores só leem o sistema **enquanto estão na tela**, e tudo pausa quando o widget está recolhido em um painel. O áudio é atualizado por eventos do PipeWire/PulseAudio (`pactl subscribe`), sem consultas periódicas: com o cartão de áudio fechado são 0 chamadas ao `pactl` (eram 1 por segundo) e, com ele aberto, 1 conexão contínua.
 
 ## Dados e privacidade
 

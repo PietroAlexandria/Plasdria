@@ -17,6 +17,7 @@ Rectangle {
     property string mode: "full"   // sem efeito: o formato vem da largura
     property bool editing: false
     signal editRequested()
+    signal settingsRequested()
     readonly property string eff: width >= 900 ? "full" : width >= 600 ? "compact" : "stacked"
 
     readonly property var w: dash.weatherDetails || ({})
@@ -113,6 +114,19 @@ Rectangle {
                     HoverHandler { id: editHover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: hero.editRequested() }
                     ToolTipText { t: hero.t; visible: editHover.hovered; text: "Editar layout: mover, ocultar e redimensionar cartões" }
+                }
+                // Configurações dentro do widget.
+                Rectangle {
+                    visible: !hero.editing
+                    Layout.preferredHeight: 26; Layout.preferredWidth: 26; radius: 13
+                    color: gearHover.hovered ? hero.t.accentSoft : Qt.rgba(hero.t.accent.r, hero.t.accent.g, hero.t.accent.b, 0.08)
+                    border.color: gearHover.hovered ? hero.t.accent : hero.t.accentLine
+                    Kirigami.Icon { anchors.centerIn: parent; source: "configure"; width: 14; height: 14; isMask: true; color: hero.t.accent }
+                    HoverHandler { id: gearHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: hero.settingsRequested() }
+                    ToolTipText { t: hero.t; visible: gearHover.hovered; text: "Configurações: aparência, cartões, ações rápidas e mais" }
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Configurações"
                 }
             }
             RowLayout {

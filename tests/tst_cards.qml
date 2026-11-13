@@ -7,7 +7,7 @@ import "../package/contents/ui/bridge" as Backend
 // mais a recusa de alvos perigosos pelo SystemClient real (que nunca executa comandos de terminal).
 Item {
     id: root
-    width: 420; height: 900
+    width: 420; height: 1200
 
     Theme { id: theme }
     Backend.SystemClient { id: realSystem }
@@ -45,6 +45,17 @@ Item {
         function toggleBluetoothDevice(p) { calls.push("toggle " + p) }
         function applications() { return [{id: "firefox", name: "Firefox", icon: "firefox"}, {id: "konsole", name: "Konsole", icon: "utilities-terminal"}] }
         function launch(t) { calls.push("launch " + t); return true }
+        property var quick: ({dndAvailable: true, dnd: false, dndOther: false, nightAvailable: true, nightEnabled: true, night: true,
+                              nightOther: false, profiles: ["power-saver", "balanced", "performance"], profile: "balanced",
+                              caffeine: false, wifiAvailable: false, wifi: false, canSuspend: true})
+        function setDoNotDisturb(on) { calls.push("dnd " + on) }
+        function setNightLight(on) { calls.push("night " + on) }
+        function setPowerProfile(p) { calls.push("perfil " + p) }
+        function setCaffeine(on) { calls.push("cafe " + on) }
+        function setWifi(on) { calls.push("wifi " + on) }
+        function lockScreen() { calls.push("bloquear") }
+        function suspend() { calls.push("suspender") }
+        function sessionMenu() { calls.push("sessao") }
     }
 
     property string saved: "[]"
@@ -52,6 +63,7 @@ Item {
     AudioCard { id: audio; t: theme; sys: fake; width: 400; y: 300 }
     BluetoothCard { id: bluetooth; t: theme; sys: fake; width: 400; y: 450 }
     TopCard { id: top; t: theme; sys: fake; width: 400; y: 620 }
+    QuickActionsCard { id: quick; t: theme; sys: fake; width: 400; y: 900 }
 
     function find(item, pred) {
         if (pred(item)) return item
@@ -148,6 +160,33 @@ Item {
             compare(top.rows.length, 1)
             compare(top.memoryText(1.5e9), "1,4 GB")
             compare(top.memoryText(5e7), "48 MB")
+        }
+
+        function clickOn(item) { const p = item.mapToItem(root, item.width / 2, item.height / 2); mouseClick(root, p.x, p.y) }
+
+        function test_acoes_rapidas() {
+            compare(fake.topics.quick, 1, "lê o estado só enquanto o cartão existe")
+            // Wi-Fi indisponível neste "computador": não aparece.
+            compare(quick.toggles.map(x => x.id), ["dnd", "night", "caffeine"])
+            clickOn(find(quick, it => it.modelData !== undefined && it.modelData.id === "dnd" && it.height > 20))
+            clickOn(find(quick, it => it.modelData !== undefined && it.modelData.id === "night" && it.height > 20))
+            clickOn(find(quick, it => it.modelData === "performance" && it.width > 20))
+            clickOn(find(quick, it => it.modelData !== undefined && it.modelData.id === "lock" && it.height > 20))
+            clickOn(find(quick, it => it.modelData !== undefined && it.modelData.id === "session" && it.height > 20))
+            compare(fake.calls, ["dnd true", "night false", "perfil performance", "bloquear", "sessao"])
+            // Luz noturna desligada no sistema: o toque abre as configurações em vez de pausar.
+            fake.calls = []
+            fake.quick = Object.assign({}, fake.quick, {nightEnabled: false, night: false})
+            wait(50)
+            clickOn(find(quick, it => it.modelData !== undefined && it.modelData.id === "night" && it.height > 20))
+            compare(fake.calls, ["launch app:kcm_nightlight"])
+            // Só os botões escolhidos, na ordem escolhida.
+            fake.quick = Object.assign({}, fake.quick, {nightEnabled: true, night: true})
+            quick.items = JSON.stringify(["caffeine", "dnd", "session"])
+            compare(quick.toggles.map(x => x.id), ["caffeine", "dnd"])
+            compare(quick.actionItems.map(x => x.id), ["session"])
+            verify(!quick.showProfile)
+            quick.items = ""
         }
 
         function test_launch_recusa_o_que_nao_e_app_link_ou_pasta() {

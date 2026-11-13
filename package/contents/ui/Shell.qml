@@ -31,6 +31,10 @@ Item {
     signal saveReminders(string json)
     signal saveLayout(string json)
     signal editRequested(bool on)
+    // Painel de configurações dentro do widget (⚙).
+    property bool settingsOpen: false
+    signal moreSettingsRequested()
+    onEditingChanged: if (editing) settingsOpen = false
     // Pede à IA do chat um resumo comentado do dia e leva o foco para o chat.
     function askAi(text) {
         if (!client.ready || client.busy) return
@@ -50,12 +54,12 @@ Item {
     }
 
     // ── Arranjo dos cartões ────────────────────────────────────────────────
-    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock", "day"]
+    readonly property var allIds: ["system", "devices", "network", "chat", "media", "calendar", "reminders", "news", "audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock", "day", "quick"]
     // Cartões novos começam ocultos: aparecem na barra de edição (＋) para você escolher onde ficam.
-    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock", "day"]
+    readonly property var newIds: ["audio", "bluetooth", "top", "gpu", "shortcuts", "speedtest", "clock", "day", "quick"]
     readonly property var names: ({system: "Sistema", devices: "Dispositivos", network: "Rede", chat: "Chat · " + shell.client.providerName,
                                    media: "Música", calendar: "Calendário", reminders: "Lembretes", news: "Notícias",
-                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos", speedtest: "Teste de velocidade", clock: "Cronômetro e pomodoro", day: "Resumo do dia"})
+                                   audio: "Áudio e brilho", bluetooth: "Bluetooth", top: "Maiores consumidores", gpu: "GPU", shortcuts: "Atalhos", speedtest: "Teste de velocidade", clock: "Cronômetro e pomodoro", day: "Resumo do dia", quick: "Ações rápidas"})
     readonly property var defaultCols: [["system", "devices", "network"], ["chat"], ["media", "calendar"], ["reminders", "news"]]
     readonly property var defaultWeights: [0.95, 1.35, 1, 1]
 
@@ -80,6 +84,7 @@ Item {
         case "speedtest": return !!cfg.showSpeedTest && !!speed
         case "clock": return !!cfg.showClock && !!clock
         case "day": return cfg.showDay !== false
+        case "quick": return cfg.showQuick !== false && !!sys
         default: return true
         }
     }
@@ -155,12 +160,15 @@ Item {
     function resetLayout() { colIds = defaultCols.map(c => c.slice()); colW = defaultWeights.slice(); hiddenIds = newIds.slice(); persist() }
 
     // ── Boas-vindas: na primeira vez, escolher quais cartões novos mostrar ────────────────
-    // cfg.welcomeSeen vale 0 em instalações novas e depois de uma atualização com cartões novos;
-    // sem a propriedade (prévia e testes) nada aparece.
-    readonly property bool welcomeNeeded: cfg.welcomeSeen === 0
+    // cfg.welcomeSeen guarda a versão da tela vista (0 em instalações novas). Subir welcomeVersion ao criar
+    // cartões a mostra de novo, só com os que ainda estão ocultos. Sem a propriedade (prévia) nada aparece.
+    readonly property int welcomeVersion: 2
+    readonly property bool welcomeNeeded: typeof cfg.welcomeSeen === "number" && cfg.welcomeSeen < welcomeVersion
     property bool welcomeDismissed: false
-    readonly property bool welcomeVisible: welcomeNeeded && !welcomeDismissed && sys !== null && !editing
-    readonly property var welcomeCards: [
+    readonly property bool welcomeVisible: welcomeNeeded && !welcomeDismissed && sys !== null && !editing && welcomeCards.length > 0
+    readonly property var welcomeCards: welcomeAll.filter(c => hiddenIds.indexOf(c.id) >= 0 && cardOn(c.id))
+    readonly property var welcomeAll: [
+        {id: "quick", icon: "configure-shortcuts", text: "Não perturbe, luz noturna, Wi-Fi, energia e bloquear"},
         {id: "audio", icon: "audio-volume-high-symbolic", text: "Volume, saída de áudio e brilho da tela"},
         {id: "top", icon: "office-chart-bar-percentage-symbolic", text: "Quais programas mais usam CPU e memória"},
         {id: "shortcuts", icon: "emblem-favorite-symbolic", text: "Apps, sites e pastas favoritos, com um toque"},
@@ -169,9 +177,9 @@ Item {
         {id: "clock", icon: "chronometer", text: "Voltas, contagem regressiva e ciclos de foco com aviso"},
         {id: "gpu", icon: "monitor-symbolic", text: "Uso, frequência e memória da placa de vídeo"},
         {id: "bluetooth", icon: "preferences-system-bluetooth-symbolic", text: "Dispositivos Bluetooth e bateria"}]
-    property var welcomePick: ({audio: true, top: true, shortcuts: true, clock: true, day: true})
+    property var welcomePick: ({quick: true, audio: true, top: true, shortcuts: true, clock: true, day: true})
     function applyWelcome() {
-        for (const id of newIds) if (welcomePick[id]) showCard(id)
+        for (const id of newIds) if (welcomePick[id] && hiddenIds.indexOf(id) >= 0) showCard(id)
         finishWelcome()
     }
     function finishWelcome() { welcomeDismissed = true; welcomeDone() }
@@ -210,6 +218,19 @@ Item {
         anchors.topMargin: shell.mode === "narrow" ? 50 : 12
         sourceComponent: shell.mode === "wide" ? wideLayout : shell.mode === "medium" ? mediumLayout : narrowLayout
     }
+
+    // Configurações
+    Loader {
+        id: settingsLoader
+        anchors.fill: parent; z: 95
+        active: shell.settingsOpen
+        sourceComponent: SettingsPanel {
+            t: shell.t; cfg: shell.cfg; host: shell
+            onCloseRequested: shell.settingsOpen = false
+            onMoreRequested: { shell.settingsOpen = false; shell.moreSettingsRequested() }
+        }
+    }
+    Shortcut { sequence: "Escape"; enabled: shell.settingsOpen; onActivated: shell.settingsOpen = false }
 
     // Boas-vindas
     Item {
@@ -296,6 +317,7 @@ Item {
     Component { id: compClock; ClockCard { t: shell.t; clock: shell.clock } }
     Component { id: compSpeedTest; SpeedTestCard { t: shell.t; speed: shell.speed } }
     Component { id: compShortcuts; ShortcutsCard { t: shell.t; sys: shell.sys; stored: shell.cfg.shortcuts || "[]"; onSave: json => shell.saveShortcuts(json) } }
+    Component { id: compQuick; QuickActionsCard { t: shell.t; sys: shell.sys; items: shell.cfg.quickItems || "" } }
     Component { id: compChat; ChatView { id: wideChatView; t: shell.t; client: shell.client; Component.onCompleted: shell.wideChat = wideChatView } }
     function factory(id) {
         switch (id) {
@@ -315,6 +337,7 @@ Item {
         case "speedtest": return compSpeedTest
         case "clock": return compClock
         case "day": return compDay
+        case "quick": return compQuick
         }
         return null
     }
@@ -445,7 +468,7 @@ Item {
             HeroPanel {
                 id: hero
                 width: parent.width
-                t: shell.t; dash: shell.dash; client: shell.client; media: shell.media; net: shell.net; reminders: shell.cfg.reminders || "[]"; userName: shell.cfg.userName || ""; mode: "full"; editing: shell.editing; onEditRequested: shell.editRequested(true)
+                t: shell.t; dash: shell.dash; client: shell.client; media: shell.media; net: shell.net; reminders: shell.cfg.reminders || "[]"; userName: shell.cfg.userName || ""; mode: "full"; editing: shell.editing; onEditRequested: shell.editRequested(true); onSettingsRequested: shell.settingsOpen = true
             }
             WeatherFooter {
                 id: footer
@@ -610,7 +633,7 @@ Item {
                     id: column
                     width: scroller.width - (scroller.contentHeight > scroller.height ? 8 : 0)
                     spacing: shell.t.gap
-                    HeroPanel { t: shell.t; dash: shell.dash; client: shell.client; media: shell.media; net: shell.net; reminders: shell.cfg.reminders || "[]"; userName: shell.cfg.userName || ""; mode: "compact"; editing: shell.editing; onEditRequested: shell.editRequested(true); Layout.fillWidth: true }
+                    HeroPanel { t: shell.t; dash: shell.dash; client: shell.client; media: shell.media; net: shell.net; reminders: shell.cfg.reminders || "[]"; userName: shell.cfg.userName || ""; mode: "compact"; editing: shell.editing; onEditRequested: shell.editRequested(true); onSettingsRequested: shell.settingsOpen = true; Layout.fillWidth: true }
                     CardStack { Layout.fillWidth: true }
                 }
             }
@@ -635,7 +658,7 @@ Item {
                     id: column
                     width: scroller.width - (scroller.contentHeight > scroller.height ? 8 : 0)
                     spacing: shell.t.gap
-                    HeroPanel { t: shell.t; dash: shell.dash; client: shell.client; media: shell.media; net: shell.net; reminders: shell.cfg.reminders || "[]"; userName: shell.cfg.userName || ""; mode: "stacked"; editing: shell.editing; onEditRequested: shell.editRequested(true); Layout.fillWidth: true }
+                    HeroPanel { t: shell.t; dash: shell.dash; client: shell.client; media: shell.media; net: shell.net; reminders: shell.cfg.reminders || "[]"; userName: shell.cfg.userName || ""; mode: "stacked"; editing: shell.editing; onEditRequested: shell.editRequested(true); onSettingsRequested: shell.settingsOpen = true; Layout.fillWidth: true }
                     CardStack { Layout.fillWidth: true }
                 }
             }

@@ -8,6 +8,7 @@ Item {
     property color color: t.accent
     property bool dimmed: false
     signal moved(real value)
+    signal released()
     implicitHeight: 18
     opacity: dimmed ? 0.45 : 1
 
@@ -30,5 +31,6 @@ Item {
         function emit(mouseX) { bar.moved(Math.max(0, Math.min(1, mouseX / width))) }
         onPressed: mouse => emit(mouse.x)
         onPositionChanged: mouse => { if (pressed) emit(mouse.x) }
+        onReleased: bar.released()
     }
 }
