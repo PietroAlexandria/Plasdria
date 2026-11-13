@@ -13,7 +13,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QProcess>
@@ -74,6 +76,53 @@ QString spotifyUri(const QString &trackId, const QString &url) {
 }
 }
 
+struct Classified { QString source; bool video = false; };
+
+// Nome amigável do programa ("firefox" -> "Firefox"; o plugin do navegador vira só "Navegador").
+QString friendlyPlayer(const QString &entry, const QString &fallback) {
+    static const QHash<QString, QString> names = {
+        {"plasma-browser-integration", "Navegador"}, {"firefox", "Firefox"}, {"chromium", "Chromium"}, {"chrome", "Chrome"},
+        {"google-chrome", "Chrome"}, {"brave", "Brave"}, {"vivaldi", "Vivaldi"}, {"opera", "Opera"}, {"msedge", "Edge"},
+        {"librewolf", "LibreWolf"}, {"zen", "Zen"}, {"vlc", "VLC"}, {"mpv", "mpv"}, {"celluloid", "Celluloid"},
+        {"elisa", "Elisa"}, {"rhythmbox", "Rhythmbox"}, {"strawberry", "Strawberry"}, {"audacious", "Audacious"},
+        {"spotify", "Spotify"}, {"haruna", "Haruna"}, {"totem", "Vídeos"}, {"showtime", "Vídeos"}, {"kodi", "Kodi"}};
+    return names.value(entry, fallback);
+}
+
+// Reconhece o site (ou o tipo de arquivo) pelo endereço que o player informa: YouTube, Netflix, um .mkv…
+Classified classify(const QString &entry, const QString &urlText) {
+    struct Site { const char *suffix; const char *name; bool video; };
+    static const Site sites[] = {
+        {"music.youtube.com", "YouTube Music", false}, {"youtube.com", "YouTube", true}, {"youtu.be", "YouTube", true},
+        {"open.spotify.com", "Spotify", false}, {"soundcloud.com", "SoundCloud", false}, {"deezer.com", "Deezer", false},
+        {"tidal.com", "Tidal", false}, {"bandcamp.com", "Bandcamp", false}, {"music.apple.com", "Apple Music", false},
+        {"music.amazon.com", "Amazon Music", false}, {"twitch.tv", "Twitch", true}, {"netflix.com", "Netflix", true},
+        {"primevideo.com", "Prime Video", true}, {"disneyplus.com", "Disney+", true}, {"hbomax.com", "Max", true},
+        {"max.com", "Max", true}, {"vimeo.com", "Vimeo", true}, {"dailymotion.com", "Dailymotion", true},
+        {"globoplay.globo.com", "Globoplay", true}, {"crunchyroll.com", "Crunchyroll", true}, {"kick.com", "Kick", true},
+        {"rumble.com", "Rumble", true}, {"tiktok.com", "TikTok", true}, {"plex.tv", "Plex", true}};
+    const QUrl url(urlText);
+    if (url.isLocalFile()) {
+        static const QStringList videoExt = {"mp4", "mkv", "avi", "webm", "mov", "wmv", "flv", "m4v", "mpg", "mpeg", "ts", "ogv"};
+        return {QString(), videoExt.contains(QFileInfo(url.toLocalFile()).suffix().toLower())};
+    }
+    const QString host = url.host().toLower();
+    if (!host.isEmpty())
+        for (const auto &site : sites)
+            if (host == QLatin1String(site.suffix) || host.endsWith(QLatin1Char('.') + QLatin1String(site.suffix)))
+                return {QString::fromUtf8(site.name), site.video};
+    static const QStringList videoPlayers = {"celluloid", "haruna", "totem", "showtime", "kodi", "smplayer", "dragon"};
+    return {QString(), videoPlayers.contains(entry)};
+}
+
+// Títulos genéricos que os programas dão ao fluxo de áudio: não dizem nada, melhor mostrar só o programa.
+bool genericStreamTitle(const QString &title, const QString &app) {
+    static const QStringList generic = {"playback", "audio stream", "audiostream", "playstream", "alsa playback", "output", "audio",
+                                        "sound", "stream", "playback stream", "pulseaudio", "pipewire"};
+    const QString t = title.trimmed().toLower();
+    return t.isEmpty() || generic.contains(t) || t == app.trimmed().toLower();
+}
+
 MediaClient::MediaClient(QObject *parent) : QObject(parent), m_net(new QNetworkAccessManager(this)) {
     restore();
     m_timer.setInterval(1500);
@@ -83,7 +132,11 @@ MediaClient::MediaClient(QObject *parent) : QObject(parent), m_net(new QNetworkA
     m_tick.setInterval(500);
     connect(&m_tick, &QTimer::timeout, this, [this] { if (playing()) emit positionChanged(); });
     m_tick.start();
+    m_listDebounce.setSingleShot(true);
+    m_listDebounce.setInterval(1500);   // só conta o que toca há mais de um instante (sons curtos do sistema não entram)
+    connect(&m_listDebounce, &QTimer::timeout, this, &MediaClient::listAudioStreams);
     poll();
+    startAudioWatch();
 }
 
 QUrl MediaClient::artUrl() const {
@@ -126,7 +179,9 @@ void MediaClient::poll() {
             auto statusOf = [&](const QString &s) { return plain(results->value(s).value("PlaybackStatus")).toString(); };
             // Ordem: o player que estamos abrindo > o que está tocando > o atual > Spotify > o primeiro.
             QString chosen;
-            if (m_pendingResume) for (const auto &s : services) if (has(s) && entryOf(s) == m_entry) { chosen = s; break; }
+            // Se o que já mostramos continua tocando, fica nele (dois players tocando não ficam trocando).
+            if (!m_pendingResume && has(m_service) && statusOf(m_service) == "Playing") chosen = m_service;
+            if (chosen.isEmpty() && m_pendingResume) for (const auto &s : services) if (has(s) && entryOf(s) == m_entry) { chosen = s; break; }
             if (chosen.isEmpty()) for (const auto &s : services) if (has(s) && statusOf(s) == "Playing") { chosen = s; break; }
             if (chosen.isEmpty() && has(m_service)) chosen = m_service;
             if (chosen.isEmpty()) for (const auto &s : services) if (has(s) && entryOf(s) == "spotify") { chosen = s; break; }
@@ -145,6 +200,7 @@ void MediaClient::apply(const QString &service, const QVariantMap &p) {
 
     QString name = service.mid(Prefix.size()).section('.', 0, 0);
     if (!name.isEmpty()) name[0] = name[0].toUpper();
+    name = friendlyPlayer(entry, name);
 
     // Retomando a última música: o player acabou de abrir.
     if (m_pendingResume && entry == m_entry) {
@@ -182,6 +238,8 @@ void MediaClient::apply(const QString &service, const QVariantMap &p) {
     }
 
     const bool newTrack = trackId + title != m_trackId + m_title;
+    const auto kind = classify(entry, plain(meta.value("xesam:url")).toString());
+    m_source = kind.source; m_video = kind.video;
     m_player = name;
     m_entry = entry;
     m_title = title;
@@ -265,7 +323,7 @@ void MediaClient::save() {
     if (key == m_savedKey && (!playing() || now - m_savedAt < 10000)) return;
     m_savedKey = key; m_savedAt = now;
     const QJsonObject state{
-        {"player", m_player}, {"entry", m_entry}, {"title", m_title}, {"artist", m_artist}, {"album", m_album},
+        {"player", m_player}, {"source", m_source}, {"video", m_video}, {"entry", m_entry}, {"title", m_title}, {"artist", m_artist}, {"album", m_album},
         {"trackId", m_trackId}, {"uri", m_uri}, {"art", m_artUrl.toString()}, {"artFile", m_artFile},
         {"length", m_length}, {"position", position()}, {"savedAt", now}};
     QDir().mkpath(QFileInfo(statePath()).absolutePath());
@@ -281,6 +339,8 @@ void MediaClient::restore() {
     if (!in.open(QIODevice::ReadOnly)) return;
     const QJsonObject s = QJsonDocument::fromJson(in.readAll()).object();
     m_player = s["player"].toString();
+    m_source = s["source"].toString();
+    m_video = s["video"].toBool();
     m_entry = s["entry"].toString();
     m_title = s["title"].toString();
     m_artist = s["artist"].toString();
@@ -386,4 +446,59 @@ void MediaClient::openSpotify() {
         return;
     }
     launch("spotify");
+}
+
+// ── Áudio de programas sem MPRIS ────────────────────────────────────────────────
+// Um único `pactl subscribe` fica de olho (não consome nada parado) e, a cada mudança nos fluxos de áudio,
+// uma lista rápida diz quem está tocando. Serve para o que não aparece como player: jogos, Discord, programas antigos.
+
+void MediaClient::startAudioWatch() {
+    if (m_watchGaveUp || m_watch) return;
+    if (QStandardPaths::findExecutable("pactl").isEmpty()) { m_watchGaveUp = true; return; }
+    m_watch = new QProcess(this);
+    connect(m_watch, &QProcess::readyReadStandardOutput, this, [this] {
+        const QByteArray out = m_watch->readAllStandardOutput();
+        if (out.contains("sink-input")) m_listDebounce.start();
+    });
+    connect(m_watch, &QProcess::finished, this, [this] {
+        m_watch->deleteLater(); m_watch = nullptr;
+        QTimer::singleShot(10000, this, &MediaClient::startAudioWatch);   // o servidor de áudio reiniciou: tenta de novo
+    });
+    connect(m_watch, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart) { m_watchGaveUp = true; m_watch->deleteLater(); m_watch = nullptr; }
+    });
+    m_watch->start("pactl", {"subscribe"});
+    listAudioStreams();
+}
+
+void MediaClient::listAudioStreams() {
+    auto *list = new QProcess(this);
+    connect(list, &QProcess::finished, this, [this, list] {
+        applyAudioStreams(list->readAllStandardOutput());
+        list->deleteLater();
+    });
+    connect(list, &QProcess::errorOccurred, list, &QObject::deleteLater);
+    list->start("pactl", {"--format=json", "list", "sink-inputs"});
+    QTimer::singleShot(4000, list, [list] { if (list->state() != QProcess::NotRunning) list->kill(); });
+}
+
+void MediaClient::applyAudioStreams(const QByteArray &json) {
+    QString app, title;
+    for (const auto &v : QJsonDocument::fromJson(json).array()) {
+        const auto stream = v.toObject();
+        if (stream["corked"].toBool() || stream["mute"].toBool()) continue;   // pausado ou sem som
+        const auto props = stream["properties"].toObject();
+        const QString role = props["media.role"].toString();
+        if (role == "event" || role == "phone" || role == "a11y") continue;    // sons do sistema e chamadas
+        QString name = props["application.name"].toString();
+        if (name.isEmpty()) name = props["application.process.binary"].toString();
+        if (name.isEmpty()) continue;
+        app = friendlyPlayer(name.toLower(), name);
+        const QString media = props["media.name"].toString();
+        title = genericStreamTitle(media, name) ? QString() : media;
+        break;
+    }
+    if (app == m_extApp && title == m_extTitle) return;
+    m_extApp = app; m_extTitle = title;
+    emit changed();
 }

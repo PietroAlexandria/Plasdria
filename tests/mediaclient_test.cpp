@@ -44,7 +44,8 @@ class MediaClientTest : public QObject {
     QTemporaryDir m_home;
     QString m_art;
     FakePlayer m_player;
-    const QString Service = "org.mpris.MediaPlayer2.spotify";
+    QString Service = "org.mpris.MediaPlayer2.spotify";
+    QString m_streams, m_events;   // arquivos que o "pactl" de mentira lê
 
     void publish() {
         auto bus = QDBusConnection::sessionBus();
@@ -63,6 +64,18 @@ private slots:
         qputenv("XDG_DATA_HOME", (m_home.path() + "/data").toUtf8());
         qputenv("XDG_CACHE_HOME", (m_home.path() + "/cache").toUtf8());
         qputenv("PLASDRIA_SPOTIFY_COMMAND", "true");   // "abrir o Spotify" não faz nada no teste
+        // "pactl" de mentira: `subscribe` acompanha um arquivo de eventos e `list` devolve um JSON escolhido pelo teste.
+        QVERIFY(QDir().mkpath(m_home.path() + "/bin"));
+        m_streams = m_home.path() + "/streams.json"; m_events = m_home.path() + "/events.txt";
+        QFile events(m_events); QVERIFY(events.open(QIODevice::WriteOnly)); events.close();
+        QFile script(m_home.path() + "/bin/pactl");
+        QVERIFY(script.open(QIODevice::WriteOnly));
+        script.write("#!/bin/bash\nif [ \"$1\" = subscribe ]; then exec tail -n0 -F \"$PLASDRIA_FAKE_EVENTS\"; fi\ncat \"$PLASDRIA_FAKE_STREAMS\" 2>/dev/null\n");
+        script.close();
+        QVERIFY(script.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        qputenv("PATH", (m_home.path() + "/bin:" + qEnvironmentVariable("PATH")).toUtf8());
+        qputenv("PLASDRIA_FAKE_STREAMS", m_streams.toUtf8());
+        qputenv("PLASDRIA_FAKE_EVENTS", m_events.toUtf8());
         m_art = m_home.path() + "/capa.png";
         QImage image(8, 8, QImage::Format_RGB32); image.fill(Qt::green);
         QVERIFY(image.save(m_art));
@@ -118,6 +131,70 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(m_player.calls.contains("SetPosition /com/spotify/track/ABC123 42"), 8000);
         QTRY_VERIFY_WITH_TIMEOUT(!client.launching() && client.live() && client.playing(), 5000);
         unpublish();
+    }
+
+    void setStreams(const QByteArray &json) {
+        QFile f(m_streams); QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate)); f.write(json); f.close();
+        QFile e(m_events); QVERIFY(e.open(QIODevice::WriteOnly | QIODevice::Append)); e.write("Event 'change' on sink-input #7\n"); e.close();
+    }
+    void publishAs(const QString &service, const QString &url, bool music = false) {
+        Service = service;
+        m_player.status = "Playing";
+        m_player.metadata = {{"mpris:trackid", QVariant::fromValue(QDBusObjectPath("/x/1"))}, {"xesam:title", "Algo"},
+                             {"xesam:artist", QStringList{music ? "Banda" : "Canal"}}, {"xesam:url", url}, {"mpris:length", qlonglong(120'000'000)}};
+        publish();
+    }
+
+    void recognizesYouTubeInTheBrowser() {
+        publishAs("org.mpris.MediaPlayer2.firefox.instance_1_23", "https://www.youtube.com/watch?v=abc");
+        MediaClient client;
+        QTRY_VERIFY_WITH_TIMEOUT(client.live() && client.title() == "Algo", 5000);
+        QCOMPARE(client.source(), QString("YouTube"));
+        QCOMPARE(client.player(), QString("Firefox"));
+        QVERIFY(client.isVideo());
+        unpublish();
+    }
+    void recognizesMusicSitesAndVideoFiles() {
+        publishAs("org.mpris.MediaPlayer2.chromium.instance9", "https://music.youtube.com/watch?v=abc", true);
+        {
+            MediaClient client;
+            QTRY_VERIFY_WITH_TIMEOUT(client.live() && client.title() == "Algo", 5000);
+            QCOMPARE(client.source(), QString("YouTube Music"));
+            QVERIFY(!client.isVideo());
+        }
+        unpublish();
+        publishAs("org.mpris.MediaPlayer2.vlc", "file:///home/x/filme.mkv");
+        {
+            MediaClient client;
+            QTRY_VERIFY_WITH_TIMEOUT(client.live() && client.title() == "Algo", 5000);
+            QCOMPARE(client.source(), QString("VLC"));   // sem site, a origem é o programa
+            QVERIFY(client.isVideo());
+        }
+        unpublish();
+        publishAs("org.mpris.MediaPlayer2.vlc", "file:///home/x/musica.flac", true);
+        {
+            MediaClient client;
+            QTRY_VERIFY_WITH_TIMEOUT(client.live() && client.title() == "Algo", 5000);
+            QVERIFY(!client.isVideo());
+        }
+        unpublish();
+    }
+    void showsAudioFromProgramsWithoutPlayer() {
+        setStreams("[]");
+        MediaClient client;
+        QVERIFY(!client.external());
+        // Jogo tocando, e um som de notificação (ignorado)
+        setStreams(R"([{"corked":false,"mute":false,"properties":{"application.name":"Discord","media.name":"Playback","media.role":"event"}},
+                       {"corked":false,"mute":false,"properties":{"application.name":"Meu Jogo","media.name":"Trilha sonora"}}])");
+        QTRY_VERIFY_WITH_TIMEOUT(client.external(), 6000);
+        QCOMPARE(client.externalApp(), QString("Meu Jogo"));
+        QCOMPARE(client.externalTitle(), QString("Trilha sonora"));
+        // Título genérico some e fica só o programa
+        setStreams(R"([{"corked":false,"mute":false,"properties":{"application.name":"Meu Jogo","media.name":"Playback"}}])");
+        QTRY_VERIFY_WITH_TIMEOUT(client.externalTitle().isEmpty() && client.external(), 6000);
+        // Pausado ou mudo não conta; sem fluxos, some
+        setStreams(R"([{"corked":true,"mute":false,"properties":{"application.name":"Meu Jogo"}},{"corked":false,"mute":true,"properties":{"application.name":"Outro"}}])");
+        QTRY_VERIFY_WITH_TIMEOUT(!client.external(), 6000);
     }
 
     void forgetClearsRememberedTrack() {

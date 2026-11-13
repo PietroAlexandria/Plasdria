@@ -6,11 +6,15 @@ import org.kde.kirigami as Kirigami
 Card {
     id: card
     required property var media
-    title: !media.available ? "Música"
+    // Programa sem player (jogo, Discord…) tocando áudio: só informa, sem controles.
+    readonly property bool ext: !media.live && media.external
+    readonly property string kindWord: media.isVideo ? "vídeo" : "música"
+    title: ext ? "Tocando · " + media.externalApp
+         : !media.available ? "Música e vídeo"
          : media.launching ? "Abrindo " + (media.player || "Spotify") + "…"
-         : !media.live ? "Última música · " + media.player
-         : (media.playing ? "Tocando · " : "Pausado · ") + media.player
-    icon: "media-playback-start-symbolic"
+         : !media.live ? "Último " + kindWord + " · " + media.source
+         : (media.playing ? "Tocando · " : "Pausado · ") + media.source + (media.source !== media.player ? " (" + media.player + ")" : "")
+    icon: media.isVideo ? "video-x-generic-symbolic" : "media-playback-start-symbolic"
     function clock(seconds) {
         if (!(seconds > 0)) return "0:00"
         const s = Math.floor(seconds), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60
@@ -26,11 +30,19 @@ Card {
         }
     ]
 
+    // Áudio de um programa sem player
+    ColumnLayout {
+        visible: card.ext
+        spacing: 3; Layout.fillWidth: true
+        Text { text: card.media.externalTitle || card.media.externalApp; color: card.t.ink; font.pixelSize: 13; font.weight: Font.DemiBold; elide: Text.ElideRight; Layout.fillWidth: true }
+        Text { text: "Este programa não oferece controles. Use o volume em Áudio e brilho."; color: card.t.faint; font.pixelSize: 11; wrapMode: Text.Wrap; Layout.fillWidth: true }
+    }
+
     // Nada para mostrar
     ColumnLayout {
-        visible: !card.media.available
+        visible: !card.media.available && !card.ext
         spacing: 8; Layout.fillWidth: true
-        Text { text: "Nada tocando. Abra o Spotify, um vídeo ou qualquer player."; color: card.t.faint; font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true }
+        Text { text: "Nada tocando. Abra o Spotify, um vídeo no navegador ou qualquer player."; color: card.t.faint; font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true }
         Rectangle {
             visible: card.media.spotifyInstalled
             Layout.preferredHeight: 30; Layout.preferredWidth: openRow.implicitWidth + 24; radius: 15
@@ -47,7 +59,7 @@ Card {
     }
 
     RowLayout {
-        visible: card.media.available
+        visible: card.media.available && !card.ext
         spacing: 12; Layout.fillWidth: true
         Rectangle {
             Layout.preferredWidth: 64; Layout.preferredHeight: 64
@@ -85,7 +97,7 @@ Card {
         }
     }
     ColumnLayout {
-        visible: card.media.available && card.media.length > 0
+        visible: card.media.available && !card.ext && card.media.length > 0
         spacing: 2; Layout.fillWidth: true
         Item {
             Layout.fillWidth: true; height: 12
@@ -104,7 +116,7 @@ Card {
         }
     }
     RowLayout {
-        visible: card.media.available
+        visible: card.media.available && !card.ext
         Layout.fillWidth: true; spacing: 6
         IconButton {
             t: card.t; icon: "media-playlist-shuffle"; size: 26
@@ -134,7 +146,7 @@ Card {
     }
     // Volume do player
     RowLayout {
-        visible: card.media.volume >= 0
+        visible: card.media.volume >= 0 && !card.ext
         Layout.fillWidth: true; spacing: 8
         Kirigami.Icon {
             source: card.media.volume <= 0 ? "audio-volume-muted" : card.media.volume < 0.4 ? "audio-volume-low" : card.media.volume < 0.75 ? "audio-volume-medium" : "audio-volume-high"

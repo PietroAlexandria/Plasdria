@@ -197,16 +197,20 @@ Rectangle {
                 detail: [hero.net.connectionName, "↓ " + hero.net.formatRate(hero.net.downloadRate)].filter(Boolean).join(" · ")
             }
             Tile {
-                icon: hero.media.playing ? "media-playback-pause" : "media-playback-start-symbolic"
-                label: !hero.media.available ? "Música"
+                // Programa sem player (jogo, Discord…) tocando áudio: só informa, sem controles.
+                readonly property bool ext: !hero.media.live && hero.media.external
+                icon: ext ? "audio-volume-high-symbolic" : hero.media.playing ? "media-playback-pause" : "media-playback-start-symbolic"
+                label: ext ? "Tocando · " + hero.media.externalApp
+                     : !hero.media.available ? "Música"
                      : hero.media.launching ? "Abrindo " + hero.media.player
-                     : !hero.media.live ? "Última · " + hero.media.player
-                     : (hero.media.playing ? "Tocando · " : "Pausado · ") + hero.media.player
-                value: hero.media.available ? (hero.media.title || "Sem título") : "Nada tocando"
-                detail: !hero.media.available ? (hero.media.spotifyInstalled ? "Clique para abrir o Spotify" : "Abra um player")
+                     : !hero.media.live ? "Última · " + hero.media.source
+                     : (hero.media.playing ? "Tocando · " : "Pausado · ") + hero.media.source + (hero.media.source !== hero.media.player ? " (" + hero.media.player + ")" : "")
+                value: ext ? (hero.media.externalTitle || hero.media.externalApp) : hero.media.available ? (hero.media.title || "Sem título") : "Nada tocando"
+                detail: ext ? "Sem controles para este programa"
+                      : !hero.media.available ? (hero.media.spotifyInstalled ? "Clique para abrir o Spotify" : "Abra um player")
                       : !hero.media.live ? "Clique para continuar"
                       : (hero.media.artist || (hero.media.playing ? "Clique para pausar" : "Clique para tocar"))
-                clickable: hero.media.available || hero.media.spotifyInstalled
+                clickable: !ext && (hero.media.available || hero.media.spotifyInstalled)
                 onActivated: hero.media.available ? hero.media.playPause() : hero.media.openSpotify()
             }
             Tile {
